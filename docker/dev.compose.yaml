@@ -1,0 +1,15 @@
+name: postgres-db-dev
+
+services:
+  db:
+    build: 
+      context: .
+      dockerfile: ./dev.Dockerfile
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres-db-dev:/var/lib/postgresql/data
+
+volumes:
+  postgres-db-dev:
