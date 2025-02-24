@@ -23,7 +23,8 @@ const Blog = sequelize.define(
         },
         likes: {
             type: DataTypes.TEXT,
-            allowNull: false
+            allowNull: false,
+            defaultValue: 0
         }
     },
     {
