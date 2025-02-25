@@ -16,11 +16,9 @@ const exampleBlog = {
     url: "example.com"
 }
 
-// create table if does not exist
-// also remove all rows if does exist
+// create table
 before(async () => {
-    await Blog.sync();
-    await Blog.destroy({where: {}});
+    await Blog.sync({force: true});
 })
 
 describe("GET blogs", () => {
@@ -32,6 +30,26 @@ describe("GET blogs", () => {
     test("Returns empty list when table is empty", async () => {
         const response = await api.get(base_url);
         assert.strictEqual(response.body.length, 0)
+    });
+
+    test("Returns list of one with one blog", async () => {
+        await Blog.create(exampleBlog);
+
+        const response = await api.get(base_url);
+        assert.strictEqual(response.body.length, 1);
+    });
+
+    test("Returns correct information", async () => {
+        await Blog.create(exampleBlog);
+
+        const response = await api.get(base_url);
+
+        const { author, title, url, likes } = response.body[0];
+
+        assert.deepStrictEqual(
+            { ...exampleBlog, likes: 0 },
+            { author, title, url, likes }
+        );
     });
 
 });
