@@ -11,8 +11,8 @@ const api = supertest(app);
 const base_url = "/api/blogs";
 
 const exampleBlog = {
-    author: "author",
-    title: "title",
+    author: "author Bloke",
+    title: "This is a title",
     url: "example.com"
 };
 
@@ -83,6 +83,34 @@ describe("POST blog", () => {
         );
 
     });
+
+    test("Returns 400 for invalid blogs", async () => {
+
+        const invalidBlog = {
+            author: {
+                firstName: "first",
+                lastName: "last"
+            },
+            // apparently gets parsed to string? (genious stuff),
+            // so can't actually pass this as "incorrect"
+            // title: 100,
+            title: [1,2,3],
+            url: [1,2,3]
+        };
+
+        async function testPost(sentBlog)
+        {
+            await api.post(base_url)
+            .send(sentBlog)
+            .expect(400);
+        }
+
+        await testPost({});
+        await testPost({...exampleBlog, author: invalidBlog.author});
+        await testPost({...exampleBlog, title: invalidBlog.title});
+        await testPost({...exampleBlog, url: invalidBlog.url});
+
+    })
 });
 
 describe("DELETE blog", () => {

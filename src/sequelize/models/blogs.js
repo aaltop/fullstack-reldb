@@ -15,11 +15,14 @@ const Blog = sequelize.define(
         },
         url: {
             type: DataTypes.TEXT,
-            allowNull: false
+            allowNull: false,
+            validate: {
+                isUrl: true
+            }
         },
         title: {
             type: DataTypes.TEXT,
-            allowNull: false
+            allowNull: false,
         },
         likes: {
             type: DataTypes.INTEGER,

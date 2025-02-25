@@ -1,6 +1,6 @@
 const express = require("express");
 
-const Blog = require("../sequelize/models/blogs");
+const Blog = require("../../sequelize/models/blogs");
 
 
 const router = express.Router();
@@ -12,9 +12,14 @@ router.route("/")
             return model.toJSON();
         }));
     })
-    .post(async (req, res) => {
-        const newBlog = await Blog.create(req.body);
-        res.status(200).json(newBlog.toJSON());
+    .post(async (req, res, next) => {
+
+        try {
+            const newBlog = await Blog.create(req.body);
+            res.status(200).json(newBlog.toJSON());
+        } catch (error) {
+            next(error);
+        }
     })
 
 router.route("/:id")
