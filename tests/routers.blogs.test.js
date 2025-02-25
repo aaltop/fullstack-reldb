@@ -8,24 +8,24 @@ const Blog = require("../src/sequelize/models/blogs");
 
 
 const api = supertest(app);
-const base_url = "/api/blogs"
+const base_url = "/api/blogs";
 
 const exampleBlog = {
     author: "author",
     title: "title",
     url: "example.com"
-}
+};
 
 // create table
 before(async () => {
     await Blog.sync({force: true});
-})
+});
 
 describe("GET blogs", () => {
 
     beforeEach(async () => {
         await Blog.destroy({where: {}});
-    })
+    });
 
     test("Returns empty list when table is empty", async () => {
         const response = await api.get(base_url);
@@ -47,9 +47,77 @@ describe("GET blogs", () => {
         const { author, title, url, likes } = response.body[0];
 
         assert.deepStrictEqual(
-            { ...exampleBlog, likes: 0 },
-            { author, title, url, likes }
+            { author, title, url, likes },
+            { ...exampleBlog, likes: 0 }
         );
+    });
+
+});
+
+describe("POST blog", () => {
+
+    beforeEach(async () => {
+        await Blog.destroy({where: {}});
+    });
+
+    test("Adds one blog", async () => {
+
+        const startNum = await Blog.count({where: {}});
+
+        const response = await api.post(base_url)
+            .send(exampleBlog);
+
+        const endNum = await Blog.count({where: {}});
+        assert.strictEqual(endNum, startNum+1);
+    });
+
+    test("Returns blog matching sent blog", async () => {
+
+        const response = await api.post(base_url)
+            .send(exampleBlog);
+        
+        const { author, title, url, likes } = response.body;
+        assert.deepStrictEqual(
+            { author, title, url, likes },
+            { ...exampleBlog, likes: 0 }
+        );
+
+    });
+});
+
+describe("DELETE blog", () => {
+
+    beforeEach(async () => {
+        await Blog.destroy({where: {}});
+        await Blog.create(exampleBlog);
+    });
+
+    test("Removes one blog", async () => {
+
+        const startNum = await Blog.count({ where: {} });
+
+        const foundBlog = await Blog.findOne();
+
+        await api.delete(`${base_url}/${foundBlog.get("id")}`)
+            .expect(204);
+
+        const endNum = await Blog.count({ where: {} });
+        assert.strictEqual(endNum, startNum - 1);
+
+    });
+
+    test("Removes matching index", async () => {
+
+        const foundBlog = await Blog.findOne();
+
+        const pk = foundBlog.get("id");
+
+        await api.delete(`${base_url}/${pk}`)
+            .expect(204);
+
+        const nullBlog = await Blog.findByPk(pk);
+        assert(!nullBlog);
+
     });
 
 });
