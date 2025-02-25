@@ -9,7 +9,6 @@ router.route("/")
     .get(async (req, res) => {
         const blogs = await Blog.findAll();
         res.status(200).json(blogs.map(model => {
-            model.set("likes", parseInt(model.get("likes")));
             return model.toJSON();
         }));
     })
