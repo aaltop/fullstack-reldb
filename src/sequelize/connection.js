@@ -13,6 +13,11 @@ if (node_env === "production") {
     url = process.env.TEST_DATABASE_URL;
 };
 
-const sequelize = new Sequelize(url);
+const sequelize = new Sequelize(
+    url,
+    {
+        typeValidation: true
+    }
+);
 
 module.exports = sequelize;

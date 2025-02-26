@@ -84,17 +84,14 @@ describe("POST blog", () => {
 
     });
 
-    test("Returns 400 for invalid blogs", async () => {
+    test.only("Returns 400 for invalid blogs", async () => {
 
         const invalidBlog = {
             author: {
                 firstName: "first",
                 lastName: "last"
             },
-            // apparently gets parsed to string? (genious stuff),
-            // so can't actually pass this as "incorrect"
-            // title: 100,
-            title: [1,2,3],
+            title: 100,
             url: [1,2,3]
         };
 
