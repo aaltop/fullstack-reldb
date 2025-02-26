@@ -35,7 +35,7 @@ router.route("/:id")
             res.status(204).end();
         }
     })
-    .put(async (req, res) => {
+    .put(async (req, res, next) => {
         const { id } = req.params;
         const { likes } = req.body;
 
@@ -43,8 +43,12 @@ router.route("/:id")
         if (!blog) {
             res.status(404).end();
         } else {
-            await blog.set("likes", likes).save();
-            res.status(200).json({ likes });
+            try {
+                await blog.set("likes", likes).save();
+                res.status(200).json({ likes });
+            } catch (error) {
+                next(error);
+            }
         }
     });
 

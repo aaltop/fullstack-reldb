@@ -1,6 +1,8 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes, ValidationError } = require("sequelize");
 
 const sequelize = require("../connection");
+
+
 
 const Blog = sequelize.define(
     "Blog",
@@ -27,7 +29,16 @@ const Blog = sequelize.define(
         likes: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            defaultValue: 0
+            defaultValue: 0,
+            validate: {
+                isInt: val => {
+                    // a float will actually be converted to an integer,
+                    // so those are also fine if they pass here, just don't want strings
+                    if (!Number.isSafeInteger(val)) {
+                        throw new Error("Blog.likes should be an integer");
+                    };
+                },
+            }
         }
     },
     {

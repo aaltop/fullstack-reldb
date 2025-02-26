@@ -84,7 +84,7 @@ describe("POST blog", () => {
 
     });
 
-    test.only("Returns 400 for invalid blogs", async () => {
+    test("Returns 400 for invalid blogs", async () => {
 
         const invalidBlog = {
             author: {
@@ -148,7 +148,7 @@ describe("DELETE blog", () => {
 });
 
 
-describe.only("PUT likes", () => {
+describe("PUT likes", () => {
 
     beforeEach(async () => {
         await Blog.destroy({ where: {} });
@@ -193,6 +193,29 @@ describe.only("PUT likes", () => {
         await api.put(`${base_url}/${pk+1}`)
             .send({ likes: 3 })
             .expect(404);
+    });
+
+    test("Returns 400 for invalid likes value", async () => {
+        const blog = await Blog.findOne();
+        const pk = blog.get("id");
+
+        async function testPut(sendValue)
+        {
+            const url = `${base_url}/${pk}`;
+            await api.put(url)
+                .send(sendValue)
+                .expect(400);
+        }
+
+        const tests = [
+            testPut(),
+            testPut({}),
+            testPut({ likes: "3" }),
+            testPut("3")
+        ];
+
+        await Promise.all(tests);
+
     });
 
 });
