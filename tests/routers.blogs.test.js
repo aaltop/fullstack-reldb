@@ -1,11 +1,11 @@
 const supertest = require("supertest");
 
-const { describe, test, after, beforeEach, before } = require("node:test");
+const { describe, test, after, beforeEach, before, afterEach } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
 const Blog = require("../src/sequelize/models/blogs");
-
+const sequelize = require("../src/sequelize/connection");
 
 const api = supertest(app);
 const base_url = "/api/blogs";
@@ -110,7 +110,7 @@ describe("POST blog", () => {
         await testPost({...exampleBlog, title: invalidBlog.title});
         await testPost({...exampleBlog, url: invalidBlog.url});
 
-    })
+    });
 });
 
 describe("DELETE blog", () => {
@@ -146,6 +146,56 @@ describe("DELETE blog", () => {
         const nullBlog = await Blog.findByPk(pk);
         assert(!nullBlog);
 
+    });
+
+});
+
+
+describe.only("PUT likes", () => {
+
+    beforeEach(async () => {
+        await Blog.destroy({ where: {} });
+        await Blog.create(exampleBlog);
+    });
+
+    test("Returns the amount changed to", async () => {
+
+        const blog = await Blog.findOne();
+        const pk = blog.get("id");
+
+        const expected = { likes: 3 };
+        const response = await api.put(`${base_url}/${pk}`)
+            .send(expected)
+            .expect(200);
+
+        const actual = response.body;
+
+        assert.deepStrictEqual(actual, expected);
+
+    });
+
+    test("Changes the likes to the sent amount", async () => {
+
+        const blog = await Blog.findOne();
+        const pk = blog.get("id");
+
+        const newLikes = 3;
+        await api.put(`${base_url}/${pk}`)
+            .send({ likes: newLikes })
+            .expect(200);
+
+        const endLikes = (await Blog.findByPk(pk)).get("likes");
+        assert.strictEqual(endLikes, newLikes);
+
+    });
+
+    test("Returns a 404 for invalid id", async () => {
+        const blog = await Blog.findOne();
+        const pk = blog.get("id");
+
+        await api.put(`${base_url}/${pk+1}`)
+            .send({ likes: 3 })
+            .expect(404);
     });
 
 });

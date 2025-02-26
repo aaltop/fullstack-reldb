@@ -34,6 +34,18 @@ router.route("/:id")
             foundBlog.destroy();
             res.status(204).end();
         }
+    })
+    .put(async (req, res) => {
+        const { id } = req.params;
+        const { likes } = req.body;
+
+        const blog = await Blog.findByPk(id);
+        if (!blog) {
+            res.status(404).end();
+        } else {
+            await blog.set("likes", likes).save();
+            res.status(200).json({ likes });
+        }
     });
 
 
