@@ -1,29 +1,25 @@
 const express = require("express");
 
 const Blog = require("../../sequelize/models/blogs");
+const { errorCatchWrapper } = require("../utils");
 
 
 const router = express.Router();
 
 router.route("/")
-    .get(async (req, res) => {
+    .get(errorCatchWrapper(async (req, res) => {
         const blogs = await Blog.findAll();
         res.status(200).json(blogs.map(model => {
             return model.toJSON();
         }));
-    })
-    .post(async (req, res, next) => {
-
-        try {
-            const newBlog = await Blog.create(req.body);
-            res.status(200).json(newBlog.toJSON());
-        } catch (error) {
-            next(error);
-        }
-    })
+    }))
+    .post(errorCatchWrapper(async (req, res) => {
+        const newBlog = await Blog.create(req.body);
+        res.status(200).json(newBlog.toJSON());
+    }));
 
 router.route("/:id")
-    .delete(async (req, res) => {
+    .delete(errorCatchWrapper(async (req, res) => {
         const { id } = req.params;
 
         const foundBlog = await Blog.findByPk(id);
@@ -34,8 +30,8 @@ router.route("/:id")
             foundBlog.destroy();
             res.status(204).end();
         }
-    })
-    .put(async (req, res, next) => {
+    }))
+    .put(errorCatchWrapper(async (req, res) => {
         const { id } = req.params;
         const { likes } = req.body;
 
@@ -43,14 +39,10 @@ router.route("/:id")
         if (!blog) {
             res.status(404).end();
         } else {
-            try {
-                await blog.set("likes", likes).save();
-                res.status(200).json({ likes });
-            } catch (error) {
-                next(error);
-            }
+            await blog.set("likes", likes).save();
+            res.status(200).json({ likes });
         }
-    });
+    }));
 
 
 module.exports = router;
