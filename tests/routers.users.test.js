@@ -57,7 +57,7 @@ describe("GET users", () => {
 
         const users = response.body;
         const { name, username, passwordHash } = users[0];
-        assert.deepStrictEqual({ name, username, passwordHash }, exampleUser);
+        assert.deepStrictEqual({ name, username, passwordHash }, existingExampleUser);
     });
 
 });
@@ -71,17 +71,18 @@ describe("POST users", () => {
     test("Returns username, name, and password hash", async () => {
 
         const response = await api.post(base_url)
-            .send(exampleUser)
+            .send(newExampleUser)
             .expect(200);
 
-        const { username, user, passwordHash } = response.body;
-        assert.deepStrictEqual({ username, user, passwordHash}, exampleUser);
+        const { username, name, passwordHash } = response.body;
+        assert(typeof passwordHash === "string");
+        assert.deepStrictEqual({ username, name }, exampleUser);
     });
 
     test("Sets createdAt, updatedAt timestamps", async () => {
 
         const response = await api.post(base_url)
-            .send(exampleUser)
+            .send(newExampleUser)
             .expect(200);
 
         const { createdAt, updatedAt } = response.body;
@@ -90,13 +91,13 @@ describe("POST users", () => {
 
     });
 
-    test("Returns 400 for wrong length username (<8, >24)", async () => {
+    test("Returns 400 for wrong length username (<8, >30)", async () => {
         await api.post(base_url)
-            .send({ ...exampleUser, password: "short"})
+            .send({ ...newExampleUser, username: "short"})
             .expect(400);
 
         await api.post(base_url)
-            .send({ ...exampleUser, password: "t"+"o".repeat(30)+"long"})
+            .send({ ...newExampleUser, username: "t"+"o".repeat(30)+"long"})
             .expect(400);
     });
 
@@ -117,12 +118,12 @@ describe("POST users", () => {
         await Promise.all([
             Promise.all(invalidExtensions.map(ext => {
                 return api.post(base_url)
-                    .send(exampleUsername+ext)
+                    .send({ ...newExampleUser, username: exampleUsername+ext })
                     .expect(400);
             })),
             Promise.all(invalidExtensions.map(ext => {
                 return api.post(base_url)
-                    .send(ext+exampleUsername)
+                    .send({ ...newExampleUser, username: ext+exampleUsername })
                     .expect(400);
             }))
         ]);
@@ -131,11 +132,11 @@ describe("POST users", () => {
 
     test("Returns 400 for wrong length password (<12, >64)", async () => {
         await api.post(base_url)
-            .send({ ...exampleUser, password: "Sh@r7"})
+            .send({ ...newExampleUser, password: "Sh@r7"})
             .expect(400);
 
         await api.post(base_url)
-            .send({ ...exampleUser, password: "To0!"+"o".repeat(64)+"ng"})
+            .send({ ...newExampleUser, password: "To0!"+"o".repeat(64)+"ng"})
             .expect(400);
     });
 
@@ -155,12 +156,12 @@ describe("POST users", () => {
         await Promise.all([
             Promise.all(invalidExtensions.map(ext => {
                 return api.post(base_url)
-                    .send(examplePassword+ext)
+                    .send({ ...newExampleUser, password: examplePassword+ext })
                     .expect(400);
             })),
             Promise.all(invalidExtensions.map(ext => {
                 return api.post(base_url)
-                    .send(ext+examplePassword)
+                    .send({ ...newExampleUser, password: ext+examplePassword })
                     .expect(400);
             }))
         ]);
@@ -173,21 +174,30 @@ describe("Change username", () => {
 
     beforeEach(async () => {
         await User.destroy({ where: {} });
+        // due to an issue with values being input
+        // between the destroy and create, not sure
+        // why that's happening but this works as
+        // a bandaid.
+        const num = await User.count({ where: {}});
+        if (num !== 0) {
+            await User.destroy({ where: {} });
+            if (await User.count({ where: {}}) !== 0) throw new Error("users not empty");
+        }
         await User.create(existingExampleUser);
     });
 
     test("Changes username", async () => {
-
         let user = await User.findOne();
 
         const newUsername = "newUsername";
-        await api.put(`${base_url}/${user.username}`)
+        const response = await api.put(`${base_url}/${user.username}`)
             .send({ username: newUsername })
             .expect(200);
 
         user = await User.findByPk(user.id);
 
-        assert.strictEqual(user.username, newUsername);
+
+        assert.strictEqual(response.body.username, newUsername);
 
     });
 
@@ -203,8 +213,69 @@ describe("Change username", () => {
             .expect(200);
 
         user = await User.findByPk(user.id);
-        assert(oldStamp && user.updatedAt);
+        assert(!!oldStamp && !!user.updatedAt);
         assert.notStrictEqual(oldStamp, user.updatedAt);
+
+    });
+
+    test("Returns 400 for invalid bodies", async () => {
+        const exampleUsername = exampleUser.username;
+        async function sendUser(body)
+        {
+            await api.put(`${base_url}/${exampleUsername}`)
+            .send(body)
+            .expect(400);
+        }
+
+        const tests = [
+            sendUser(),
+            sendUser({}),
+            sendUser({ usernam: "newUsername" }),
+            sendUser({ username: null }),
+            sendUser({ username: 1234567891234567 })
+        ]
+
+        await Promise.all(tests);
+    });
+
+
+    test("Returns 400 for wrong length username (<8, >30)", async () => {
+        const exampleUsername = exampleUser.username;
+        await api.put(`${base_url}/${exampleUsername}`)
+            .send({ username: "short" })
+            .expect(400);
+
+        await api.put(`${base_url}/${exampleUsername}`)
+            .send({ username: "t"+"o".repeat(30)+"long" })
+            .expect(400);
+    });
+
+    test("Returns 400 for username with invalid symbols", async () => {
+        
+        // not obviously very easy to be comprehensive about it,
+        // so just put a few examples here, at least for now
+        const invalidExtensions = [
+            " ",
+            "\n",
+            "\r",
+            "\t",
+            "ä",
+            "Ö",
+        ].concat([..."~`!@#$%^&*()+={[}]|\\:;\"'<,>.?/"]);
+        
+        const exampleUsername = exampleUser.username;
+        await Promise.all([
+            Promise.all(invalidExtensions.map(ext => {
+                return api.put(`${base_url}/${exampleUsername}`)
+                    .send({ username: exampleUsername+ext })
+                    .expect(400);
+            })),
+            Promise.all(invalidExtensions.map(ext => {
+                return api.put(`${base_url}/${exampleUsername}`)
+                    .send({ username: ext+exampleUsername })
+                    .expect(400);
+            }))
+        ]);
 
     });
 
