@@ -14,7 +14,7 @@ const examplePassword = "AperfectlyV4l!dpassword";
 const exampleHash = bcrypt.hashSync(examplePassword, 10);
 const exampleUser = {
     name: "Dave Example",
-    username: "xXxDaveyxXx",
+    username: "DaveyBoy@DavesSite.com",
 };
 const newExampleUser = {
     ...exampleUser,
@@ -62,7 +62,7 @@ describe("GET users", () => {
 
 });
 
-describe("POST users", () => {
+describe.only("POST users", () => {
 
     beforeEach(async () => {
         await User.destroy({ where: {} });
@@ -91,51 +91,23 @@ describe("POST users", () => {
 
     });
 
-    test("Returns 400 for wrong length username (<8, >30)", async () => {
-        await api.post(base_url)
-            .send({ ...newExampleUser, username: "short"})
+    test("Returns 400 for non-email username", async () => {
+        
+        const invalidUsernames = [
+            "",
+            "xXxDaveyBoyxXx",
+            3000,
+            "https://www.Dave.com",
+            "Dave@email",
+            null,
+            undefined
+        ]
+
+        await Promise.all(invalidUsernames.map(async usr => {
+            await api.post(base_url)
+            .send({ ...newExampleUser, username: usr})
             .expect(400);
-
-        await api.post(base_url)
-            .send({ ...newExampleUser, username: "t"+"o".repeat(30)+"long"})
-            .expect(400);
-    });
-
-    test("Returns 400 for username with invalid symbols", async () => {
-
-        // not obviously very easy to be comprehensive about it,
-        // so just put a few examples here, at least for now
-        const invalidExtensions = [
-            " ",
-            "\n",
-            "\r",
-            "\t",
-            "ä",
-            "Ö",
-        ].concat([..."~`!@#$%^&*()+={[}]|\\:;\"'<,>.?/"]);
-
-        const errorState = {
-            err: undefined
-        }
-
-        function postUser(user)
-        {
-            return api.post(base_url)
-                .send(user)
-                .expect(400);
-        }
-
-        const exampleUsername = exampleUser.username;
-        await Promise.all([
-            Promise.all(invalidExtensions.map(ext => {
-                return postUser({ ...newExampleUser, username: exampleUsername+ext });
-            })),
-            Promise.all(invalidExtensions.map(ext => {
-                return postUser({ ...newExampleUser, username: ext+exampleUsername });
-            }))
-        ]);
-
-        if (errorState.err) throw errorState.err;
+        }));
 
     });
 
@@ -177,26 +149,30 @@ describe("POST users", () => {
 
     });
 
-    // There's some weird overlap between these tests
-    // and the next ones, where the last two here
-    // seem to cause the first below to fail due to
-    // there being a user in the database despite the .destroy
-    // below. This after seems to fix that.
-    after(async () => await User.destroy({ where: {} }));
-
 });
 
 describe("Change username", () => {
 
     beforeEach(async () => {
         await User.destroy({ where: {} });
+
+        // There's some weird overlap between these tests
+        // and the above ones, where the last two there (maybe?)
+        // seem to cause the first here to fail due to
+        // there being a user in the database despite the .destroy
+        // here. This should hopefully fix that.
+        const num = await User.count({ where: {} });
+        if (num !== 0) {
+            await User.destroy({ where: {} });
+            if (await User.count({ where: {} })) throw new Error("Database not properly initialised");
+        }
         await User.create(existingExampleUser);
     });
 
     test("Changes username", async () => {
         let user = await User.findOne();
 
-        const newUsername = "newUsername";
+        const newUsername = "DaveyMan@DavesSite.com";
         const response = await api.put(`${base_url}/${user.username}`)
             .send({ username: newUsername })
             .expect(200);
@@ -214,7 +190,7 @@ describe("Change username", () => {
 
         const oldStamp = user.updatedAt;
 
-        const newUsername = "newUsername";
+        const newUsername = "DaveyMan@DavesSite.com";
         await api.put(`${base_url}/${user.username}`)
             .send({ username: newUsername })
             .expect(200);
@@ -245,44 +221,24 @@ describe("Change username", () => {
         await Promise.all(tests);
     });
 
-
-    test("Returns 400 for wrong length username (<8, >30)", async () => {
-        const exampleUsername = exampleUser.username;
-        await api.put(`${base_url}/${exampleUsername}`)
-            .send({ username: "short" })
-            .expect(400);
-
-        await api.put(`${base_url}/${exampleUsername}`)
-            .send({ username: "t"+"o".repeat(30)+"long" })
-            .expect(400);
-    });
-
-    test("Returns 400 for username with invalid symbols", async () => {
+    test("Returns 400 for non-email username", async () => {
         
-        // not obviously very easy to be comprehensive about it,
-        // so just put a few examples here, at least for now
-        const invalidExtensions = [
-            " ",
-            "\n",
-            "\r",
-            "\t",
-            "ä",
-            "Ö",
-        ].concat([..."~`!@#$%^&*()+={[}]|\\:;\"'<,>.?/"]);
-        
+        const invalidUsernames = [
+            "",
+            "xXxDaveyBoyxXx",
+            3000,
+            "https://www.Dave.com",
+            "Dave@email",
+            null,
+            undefined
+        ]
+
         const exampleUsername = exampleUser.username;
-        await Promise.all([
-            Promise.all(invalidExtensions.map(ext => {
-                return api.put(`${base_url}/${exampleUsername}`)
-                    .send({ username: exampleUsername+ext })
-                    .expect(400);
-            })),
-            Promise.all(invalidExtensions.map(ext => {
-                return api.put(`${base_url}/${exampleUsername}`)
-                    .send({ username: ext+exampleUsername })
-                    .expect(400);
-            }))
-        ]);
+        await Promise.all(invalidUsernames.map(async usr => {
+            await api.put(`${base_url}/${exampleUsername}`)
+            .send({ ...newExampleUser, username: usr})
+            .expect(400);
+        }));
 
     });
 
