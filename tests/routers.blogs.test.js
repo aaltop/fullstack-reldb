@@ -8,7 +8,7 @@ const Blog = require("../src/sequelize/models/blogs");
 const sequelize = require("../src/sequelize/connection");
 
 const api = supertest(app);
-const base_url = "/api/blogs";
+const baseUrl = "/api/blogs";
 
 const exampleBlog = {
     author: "author Bloke",
@@ -28,21 +28,21 @@ describe("GET blogs", () => {
     });
 
     test("Returns empty list when table is empty", async () => {
-        const response = await api.get(base_url);
+        const response = await api.get(baseUrl);
         assert.strictEqual(response.body.length, 0)
     });
 
     test("Returns list of one with one blog", async () => {
         await Blog.create(exampleBlog);
 
-        const response = await api.get(base_url);
+        const response = await api.get(baseUrl);
         assert.strictEqual(response.body.length, 1);
     });
 
     test("Returns correct information", async () => {
         await Blog.create(exampleBlog);
 
-        const response = await api.get(base_url);
+        const response = await api.get(baseUrl);
 
         const { author, title, url, likes } = response.body[0];
 
@@ -64,7 +64,7 @@ describe("POST blog", () => {
 
         const startNum = await Blog.count({where: {}});
 
-        const response = await api.post(base_url)
+        const response = await api.post(baseUrl)
             .send(exampleBlog);
 
         const endNum = await Blog.count({where: {}});
@@ -73,7 +73,7 @@ describe("POST blog", () => {
 
     test("Returns blog matching sent blog", async () => {
 
-        const response = await api.post(base_url)
+        const response = await api.post(baseUrl)
             .send(exampleBlog);
         
         const { author, title, url, likes } = response.body;
@@ -97,7 +97,7 @@ describe("POST blog", () => {
 
         async function testPost(sentBlog)
         {
-            await api.post(base_url)
+            await api.post(baseUrl)
             .send(sentBlog)
             .expect(400);
         }
@@ -123,7 +123,7 @@ describe("DELETE blog", () => {
 
         const foundBlog = await Blog.findOne();
 
-        await api.delete(`${base_url}/${foundBlog.get("id")}`)
+        await api.delete(`${baseUrl}/${foundBlog.get("id")}`)
             .expect(204);
 
         const endNum = await Blog.count({ where: {} });
@@ -137,7 +137,7 @@ describe("DELETE blog", () => {
 
         const pk = foundBlog.get("id");
 
-        await api.delete(`${base_url}/${pk}`)
+        await api.delete(`${baseUrl}/${pk}`)
             .expect(204);
 
         const nullBlog = await Blog.findByPk(pk);
@@ -161,7 +161,7 @@ describe("PUT likes", () => {
         const pk = blog.get("id");
 
         const expected = { likes: 3 };
-        const response = await api.put(`${base_url}/${pk}`)
+        const response = await api.put(`${baseUrl}/${pk}`)
             .send(expected)
             .expect(200);
 
@@ -177,7 +177,7 @@ describe("PUT likes", () => {
         const pk = blog.get("id");
 
         const newLikes = 3;
-        await api.put(`${base_url}/${pk}`)
+        await api.put(`${baseUrl}/${pk}`)
             .send({ likes: newLikes })
             .expect(200);
 
@@ -190,7 +190,7 @@ describe("PUT likes", () => {
         const blog = await Blog.findOne();
         const pk = blog.get("id");
 
-        await api.put(`${base_url}/${pk+1}`)
+        await api.put(`${baseUrl}/${pk+1}`)
             .send({ likes: 3 })
             .expect(404);
     });
@@ -201,7 +201,7 @@ describe("PUT likes", () => {
 
         async function testPut(sendValue)
         {
-            const url = `${base_url}/${pk}`;
+            const url = `${baseUrl}/${pk}`;
             await api.put(url)
                 .send(sendValue)
                 .expect(400);

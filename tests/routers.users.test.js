@@ -25,7 +25,7 @@ const existingExampleUser = {
     passwordHash: exampleHash
 }
 
-const base_url = "/api/users";
+const baseUrl = "/api/users";
 
 before(async () => {
     await User.sync({ force: true, match: /testing/ });
@@ -40,7 +40,7 @@ describe("GET users", () => {
 
     test("Returns empty list when no users", async () => {
 
-        const response = await api.get(base_url)
+        const response = await api.get(baseUrl)
             .expect(200);
 
         const users = response.body;
@@ -52,7 +52,7 @@ describe("GET users", () => {
 
         await User.create(existingExampleUser);
 
-        const response = await api.get(base_url)
+        const response = await api.get(baseUrl)
             .expect(200);
 
         const users = response.body;
@@ -70,7 +70,7 @@ describe.only("POST users", () => {
 
     test("Returns username, name, and password hash", async () => {
 
-        const response = await api.post(base_url)
+        const response = await api.post(baseUrl)
             .send(newExampleUser)
             .expect(200);
 
@@ -81,7 +81,7 @@ describe.only("POST users", () => {
 
     test("Sets createdAt, updatedAt timestamps", async () => {
 
-        const response = await api.post(base_url)
+        const response = await api.post(baseUrl)
             .send(newExampleUser)
             .expect(200);
 
@@ -104,7 +104,7 @@ describe.only("POST users", () => {
         ]
 
         await Promise.all(invalidUsernames.map(async usr => {
-            await api.post(base_url)
+            await api.post(baseUrl)
             .send({ ...newExampleUser, username: usr})
             .expect(400);
         }));
@@ -112,11 +112,11 @@ describe.only("POST users", () => {
     });
 
     test("Returns 400 for wrong length password (<12, >64)", async () => {
-        await api.post(base_url)
+        await api.post(baseUrl)
             .send({ ...newExampleUser, password: "Sh@r7"})
             .expect(400);
 
-        await api.post(base_url)
+        await api.post(baseUrl)
             .send({ ...newExampleUser, password: "To0!"+"o".repeat(64)+"ng"})
             .expect(400);
     });
@@ -136,12 +136,12 @@ describe.only("POST users", () => {
 
         await Promise.all([
             Promise.all(invalidExtensions.map(ext => {
-                return api.post(base_url)
+                return api.post(baseUrl)
                     .send({ ...newExampleUser, password: examplePassword+ext })
                     .expect(400);
             })),
             Promise.all(invalidExtensions.map(ext => {
-                return api.post(base_url)
+                return api.post(baseUrl)
                     .send({ ...newExampleUser, password: ext+examplePassword })
                     .expect(400);
             }))
@@ -173,7 +173,7 @@ describe("Change username", () => {
         let user = await User.findOne();
 
         const newUsername = "DaveyMan@DavesSite.com";
-        const response = await api.put(`${base_url}/${user.username}`)
+        const response = await api.put(`${baseUrl}/${user.username}`)
             .send({ username: newUsername })
             .expect(200);
 
@@ -191,7 +191,7 @@ describe("Change username", () => {
         const oldStamp = user.updatedAt;
 
         const newUsername = "DaveyMan@DavesSite.com";
-        await api.put(`${base_url}/${user.username}`)
+        await api.put(`${baseUrl}/${user.username}`)
             .send({ username: newUsername })
             .expect(200);
 
@@ -205,7 +205,7 @@ describe("Change username", () => {
         const exampleUsername = exampleUser.username;
         async function sendUser(body)
         {
-            await api.put(`${base_url}/${exampleUsername}`)
+            await api.put(`${baseUrl}/${exampleUsername}`)
             .send(body)
             .expect(400);
         }
@@ -235,7 +235,7 @@ describe("Change username", () => {
 
         const exampleUsername = exampleUser.username;
         await Promise.all(invalidUsernames.map(async usr => {
-            await api.put(`${base_url}/${exampleUsername}`)
+            await api.put(`${baseUrl}/${exampleUsername}`)
             .send({ ...newExampleUser, username: usr})
             .expect(400);
         }));
