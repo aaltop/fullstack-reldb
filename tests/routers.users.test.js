@@ -1,7 +1,7 @@
 const supertest = require("supertest");
 const bcrypt = require("bcryptjs");
 
-const { before, beforeEach, describe, test } = require("node:test");
+const { before, beforeEach, describe, test, after } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
@@ -111,22 +111,31 @@ describe("POST users", () => {
             "\r",
             "\t",
             "ä",
-            "Ö"
-        ];
+            "Ö",
+        ].concat([..."~`!@#$%^&*()+={[}]|\\:;\"'<,>.?/"]);
+
+        const errorState = {
+            err: undefined
+        }
+
+        function postUser(user)
+        {
+            return api.post(base_url)
+                .send(user)
+                .expect(400);
+        }
 
         const exampleUsername = exampleUser.username;
         await Promise.all([
             Promise.all(invalidExtensions.map(ext => {
-                return api.post(base_url)
-                    .send({ ...newExampleUser, username: exampleUsername+ext })
-                    .expect(400);
+                return postUser({ ...newExampleUser, username: exampleUsername+ext });
             })),
             Promise.all(invalidExtensions.map(ext => {
-                return api.post(base_url)
-                    .send({ ...newExampleUser, username: ext+exampleUsername })
-                    .expect(400);
+                return postUser({ ...newExampleUser, username: ext+exampleUsername });
             }))
         ]);
+
+        if (errorState.err) throw errorState.err;
 
     });
 
@@ -168,21 +177,19 @@ describe("POST users", () => {
 
     });
 
+    // There's some weird overlap between these tests
+    // and the next ones, where the last two here
+    // seem to cause the first below to fail due to
+    // there being a user in the database despite the .destroy
+    // below. This after seems to fix that.
+    after(async () => await User.destroy({ where: {} }));
+
 });
 
 describe("Change username", () => {
 
     beforeEach(async () => {
         await User.destroy({ where: {} });
-        // due to an issue with values being input
-        // between the destroy and create, not sure
-        // why that's happening but this works as
-        // a bandaid.
-        const num = await User.count({ where: {}});
-        if (num !== 0) {
-            await User.destroy({ where: {} });
-            if (await User.count({ where: {}}) !== 0) throw new Error("users not empty");
-        }
         await User.create(existingExampleUser);
     });
 
