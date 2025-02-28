@@ -4,7 +4,7 @@ const { describe, test, after, beforeEach, before, afterEach } = require("node:t
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const Blog = require("../src/sequelize/models/blogs");
+const { Blog } = require("../src/sequelize/models.js");
 const sequelize = require("../src/sequelize/connection");
 
 const api = supertest(app);

@@ -1,6 +1,6 @@
 const express = require("express");
 
-const Blog = require("../../sequelize/models/blogs");
+const { Blog } = require("../../sequelize/models.js");
 const { errorCatchWrapper } = require("../utils");
 
 

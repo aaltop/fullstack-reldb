@@ -5,7 +5,7 @@ const { before, beforeEach, describe, test, after } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const User = require("../src/sequelize/models/users");
+const { User } = require("../src/sequelize/models.js");
 
 const api = supertest(app);
 
@@ -62,7 +62,7 @@ describe("GET users", () => {
 
 });
 
-describe.only("POST users", () => {
+describe("POST users", () => {
 
     beforeEach(async () => {
         await User.destroy({ where: {} });

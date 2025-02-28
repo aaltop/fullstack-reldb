@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-const User = require("../../sequelize/models/users");
+const { User } = require("../../sequelize/models.js");
 const { errorCatchWrapper } = require("../utils");
 const env = require("../../utils/env");
 
