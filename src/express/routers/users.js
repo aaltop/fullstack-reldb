@@ -19,9 +19,9 @@ router.route("/")
         const { name, username, password } = req.body;
 
         if (password.length < 12 || password.length > 64) {
-            res.status(400).json({ error: "Password should be of length between 12 and 64"});
+            return res.status(400).json({ error: "Password should be of length between 12 and 64"});
         }else if (checkPassword(password)) {
-            res.status(400).json({ error: "Password should only contain ASCII letters, numbers, and symbols"});
+            return res.status(400).json({ error: "Password should only contain ASCII letters, numbers, and symbols"});
         }
 
         const hash = await bcrypt.hash(password, 10);
@@ -38,11 +38,11 @@ router.route("/:username")
         const { username: usernameToChange } = req.params;
         const { username: newUsername } = req.body;
 
-        if (!(typeof newUsername === "string")) res.status(400).json({ error: "New username should be sent in the body" });
+        if (!(typeof newUsername === "string")) return res.status(400).json({ error: "New username should be sent in the body" });
         // upsert might also work? but there arguments don't really
         // seem to match what's needed here
         const user = await User.findOne({ where: { username: usernameToChange }});
-        if (!user) res.status(404).end();
+        if (!user) return res.status(404).end();
 
         user.set("username", newUsername);
         const modifiedUser = await user.save();
