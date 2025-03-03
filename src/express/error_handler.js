@@ -1,6 +1,7 @@
 const express = require("express");
 
-const sequelizeHandler = require("./error_handlers/sequelize");
+const sequelizeHandler = require("./error_handlers/sequelize.js");
+const jwtHandler = require("./error_handlers/jwt.js");
 
 function catchAll(err, req, res, next)
 {
@@ -10,5 +11,6 @@ function catchAll(err, req, res, next)
 
 module.exports = [
     sequelizeHandler,
+    jwtHandler,
     catchAll
 ];

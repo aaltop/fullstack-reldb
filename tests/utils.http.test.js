@@ -50,6 +50,7 @@ describe("Bearer token", () => {
             " token",
             "Bearer",
             "Bearer ",
+            `Basic ${token}`,
             null,
             undefined,
             [1,2,3],

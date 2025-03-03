@@ -1,11 +1,13 @@
 const supertest = require("supertest");
+const bcrypt = require("bcryptjs");
 
 const { describe, test, after, beforeEach, before, afterEach } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const { Blog } = require("../src/sequelize/models.js");
+const { Blog, User } = require("../src/sequelize/models.js");
 const sequelize = require("../src/sequelize/connection");
+const { createBearerString, parseBearerString } = require("../src/utils/http.js");
 
 const api = supertest(app);
 const baseUrl = "/api/blogs";
@@ -16,9 +18,27 @@ const exampleBlog = {
     url: "example.com"
 };
 
-// create table
+const examplePassword = "AperfectlyV4l!dpassword";
+const exampleHash = bcrypt.hashSync(examplePassword, 10);
+const existingExampleUser = {
+    name: "Dave Example",
+    username: "DaveyBoy@DavesSite.com",
+    passwordHash: exampleHash
+};
+
+let token = null;
+// create tables, get user token
 before(async () => {
-    await Blog.sync({force: true});
+    await Blog.sync({ force: true, match: /testing/ });
+    await User.sync({ force: true, match: /testing/ });
+
+    await User.create(existingExampleUser);
+    response = await api.post("/api/login")
+        .send({ username: existingExampleUser.username, password: examplePassword })
+        .expect(200);
+
+    token = response.body.token;
+    assert(typeof token === "string");
 });
 
 describe("GET blogs", () => {
@@ -60,12 +80,19 @@ describe("POST blog", () => {
         await Blog.destroy({where: {}});
     });
 
+    function postBlog(blog, localToken)
+    {
+        localToken ??= token;
+        return api.post(baseUrl)
+            .set("authorization", createBearerString(localToken))
+            .send(blog);
+    }
+
     test("Adds one blog", async () => {
 
         const startNum = await Blog.count({where: {}});
 
-        const response = await api.post(baseUrl)
-            .send(exampleBlog);
+        const response = await postBlog(exampleBlog).expect(200);
 
         const endNum = await Blog.count({where: {}});
         assert.strictEqual(endNum, startNum+1);
@@ -73,8 +100,7 @@ describe("POST blog", () => {
 
     test("Returns blog matching sent blog", async () => {
 
-        const response = await api.post(baseUrl)
-            .send(exampleBlog);
+        const response = await postBlog(exampleBlog).expect(200);
         
         const { author, title, url, likes } = response.body;
         assert.deepStrictEqual(
@@ -97,15 +123,32 @@ describe("POST blog", () => {
 
         async function testPost(sentBlog)
         {
-            await api.post(baseUrl)
-            .send(sentBlog)
-            .expect(400);
+            await postBlog(sentBlog).expect(400);
         }
 
         await testPost({});
         await testPost({...exampleBlog, author: invalidBlog.author});
         await testPost({...exampleBlog, title: invalidBlog.title});
         await testPost({...exampleBlog, url: invalidBlog.url});
+
+    });
+
+    test("Returns 401 for invalid tokens or missing auth", async () => {
+
+        await api.post(baseUrl).send(exampleBlog).expect(401);
+
+        const invalidValues = [
+            1,
+            1.4,
+            [1,2,3],
+            { some: "value" },
+            null,
+            undefined
+        ];
+
+        await Promise.allSettled(invalidValues.map(val => {
+            return postBlog(exampleBlog, val).expect(401);
+        }));
 
     });
 });

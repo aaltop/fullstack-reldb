@@ -22,7 +22,7 @@ function parseBearerString(bearerString)
 {
     try {
         const [start, token] = bearerString.split(" ");
-        if (!start | !token) return null;
+        if (start !== "Bearer" | !token) return null;
         return token;
     } catch (error) {
         return null;

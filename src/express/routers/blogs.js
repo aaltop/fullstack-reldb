@@ -1,7 +1,8 @@
 const express = require("express");
 
-const { Blog } = require("../../sequelize/models.js");
+const { Blog, User } = require("../../sequelize/models.js");
 const { errorCatchWrapper } = require("../utils");
+const { usernameFromBearerString } = require("../utils.js");
 
 
 const router = express.Router();
@@ -14,7 +15,13 @@ router.route("/")
         }));
     }))
     .post(errorCatchWrapper(async (req, res) => {
-        const newBlog = await Blog.create(req.body);
+        const bearerResult = usernameFromBearerString(req.header("Authorization"));
+        if (bearerResult.error) throw bearerResult.error;
+        
+        const user = await User.findOne({ where: { username: bearerResult.username }});
+        if (!user) return res.status(400).json({ error: "No user matches given token" });
+
+        const newBlog = await Blog.create({ ...req.body, UserId: user.id });
         res.status(200).json(newBlog.toJSON());
     }));
 
