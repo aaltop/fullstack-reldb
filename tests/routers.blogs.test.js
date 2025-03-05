@@ -7,16 +7,10 @@ const assert = require("node:assert");
 const app = require("../src/app");
 const { Blog, User } = require("../src/sequelize/models.js");
 const sequelize = require("../src/sequelize/connection");
-const { createBearerString, parseBearerString } = require("../src/utils/http.js");
+const { createBearerString } = require("../src/utils/http.js");
 
 const api = supertest(app);
 const baseUrl = "/api/blogs";
-
-const exampleBlog = {
-    author: "author Bloke",
-    title: "This is a title",
-    url: "example.com"
-};
 
 const examplePassword = "AperfectlyV4l!dpassword";
 const exampleHash = bcrypt.hashSync(examplePassword, 10);
@@ -27,18 +21,25 @@ const existingExampleUser = {
 };
 
 let token = null;
-// create tables, get user token
+let exampleBlog = null;
+// create tables, get user token, set UserId in blog
 before(async () => {
     await Blog.sync({ force: true, match: /testing/ });
     await User.sync({ force: true, match: /testing/ });
 
-    await User.create(existingExampleUser);
+    const createdUser = await User.create(existingExampleUser);
     response = await api.post("/api/login")
         .send({ username: existingExampleUser.username, password: examplePassword })
         .expect(200);
 
     token = response.body.token;
     assert(typeof token === "string");
+    exampleBlog = {
+        author: "author Bloke",
+        title: "This is a title",
+        url: "example.com",
+        UserId: createdUser.id
+    };
 });
 
 describe("GET blogs", () => {
@@ -64,12 +65,15 @@ describe("GET blogs", () => {
 
         const response = await api.get(baseUrl);
 
-        const { author, title, url, likes } = response.body[0];
+        const actual = response.body[0];
+        const expected = { ...exampleBlog, likes: 0 }
 
-        assert.deepStrictEqual(
-            { author, title, url, likes },
-            { ...exampleBlog, likes: 0 }
-        );
+        Object.keys(expected).forEach(val => {
+            assert.deepStrictEqual(
+                actual[val],
+                expected[val]
+            )
+        });
     });
 
 });
@@ -102,11 +106,15 @@ describe("POST blog", () => {
 
         const response = await postBlog(exampleBlog).expect(200);
         
-        const { author, title, url, likes } = response.body;
-        assert.deepStrictEqual(
-            { author, title, url, likes },
-            { ...exampleBlog, likes: 0 }
-        );
+        const actual = response.body;
+        const expected = { ...exampleBlog, likes: 0 }
+
+        Object.keys(expected).forEach(val => {
+            assert.deepStrictEqual(
+                actual[val],
+                expected[val]
+            )
+        });
 
     });
 
@@ -118,7 +126,8 @@ describe("POST blog", () => {
                 lastName: "last"
             },
             title: 100,
-            url: [1,2,3]
+            url: [1,2,3],
+            UserId: "Not an integer"
         };
 
         async function testPost(sentBlog)
@@ -130,6 +139,7 @@ describe("POST blog", () => {
         await testPost({...exampleBlog, author: invalidBlog.author});
         await testPost({...exampleBlog, title: invalidBlog.title});
         await testPost({...exampleBlog, url: invalidBlog.url});
+        await testPost({...exampleBlog, url: invalidBlog.UserId});
 
     });
 
