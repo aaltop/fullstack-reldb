@@ -20,9 +20,13 @@ async function findUser(req)
 
 router.route("/")
     .get(errorCatchWrapper(async (req, res) => {
-        const blogs = await Blog.findAll();
+        const blogs = await Blog.findAll({ include: "User" });
         res.status(200).json(blogs.map(model => {
-            return model.toJSON();
+            const retModel = model.toJSON();
+            const { name, username } = retModel.User;
+            retModel.user = { name, username };
+            delete retModel.User;
+            return retModel;
         }));
     }))
     .post(errorCatchWrapper(async (req, res) => {

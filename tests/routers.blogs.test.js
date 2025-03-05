@@ -68,14 +68,29 @@ describe("GET blogs", () => {
         const response = await api.get(baseUrl);
 
         const actual = response.body[0];
-        const expected = { ...exampleBlog, likes: 0 }
-
-        Object.keys(expected).forEach(val => {
-            assert.deepStrictEqual(
-                actual[val],
-                expected[val]
-            )
+        const extraProperties = [
+            "createdAt",
+            "updatedAt",
+            "id"
+        ]
+        extraProperties.forEach(key => {
+            assert(key in actual);
+            delete actual[key];
         });
+
+        const expected = {
+            ...exampleBlog,
+            likes: 0,
+            user: {
+                name: existingExampleUser.name,
+                username: existingExampleUser.username
+            }
+        };
+
+        assert.deepStrictEqual(
+            actual,
+            expected
+        )
     });
 
 });

@@ -11,9 +11,18 @@ const router = express.Router();
 
 router.route("/")
     .get(errorCatchWrapper(async (req, res) => {
-        const users = await User.findAll();
+        const users = await User.findAll({ include: "Blogs" });
 
-        res.json(users.map(user => user.toJSON()));
+        res.json(users.map(user => {
+            const retUser = user.toJSON();
+            const blogs = retUser.Blogs.map(blog => {
+                const { title, author, url, likes } = blog;
+                return { title, author, url, likes };
+            });
+            retUser.blogs = blogs;
+            delete retUser.Blogs;
+            return retUser;
+        }));
     }))
     .post(errorCatchWrapper(async (req, res) => {
         const { name, username, password } = req.body;

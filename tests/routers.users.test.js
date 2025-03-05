@@ -5,7 +5,7 @@ const { before, beforeEach, describe, test, after } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const { User } = require("../src/sequelize/models.js");
+const { User, Blog } = require("../src/sequelize/models.js");
 
 const api = supertest(app);
 
@@ -24,18 +24,30 @@ const existingExampleUser = {
     ...exampleUser,
     passwordHash: exampleHash
 }
-
+let exampleBlog = {
+    author: "author Bloke",
+    title: "This is a title",
+    url: "example.com"
+};
 const baseUrl = "/api/users";
+
+async function createUserAndBlog(user, blog)
+{
+    const createdUser = await User.create(user);
+    const createdBlog = await Blog.create({ ...blog, UserId: createdUser.id });
+    return { user: createdUser, blog: createdBlog }
+}
 
 before(async () => {
     await User.sync({ force: true, match: /testing/ });
-
+    await Blog.sync({ force: true, match: /testing/ });
 });
 
 describe("GET users", () => {
 
     beforeEach(async () => {
         await User.destroy({ where: {} });
+        await Blog.destroy({ where: {} });
     });
 
     test("Returns empty list when no users", async () => {
@@ -50,14 +62,27 @@ describe("GET users", () => {
 
     test("Returns matching user", async () => {
 
-        await User.create(existingExampleUser);
+        await createUserAndBlog(existingExampleUser, exampleBlog)
 
         const response = await api.get(baseUrl)
             .expect(200);
 
         const users = response.body;
-        const { name, username, passwordHash } = users[0];
-        assert.deepStrictEqual({ name, username, passwordHash }, existingExampleUser);
+        const actual = users[0];
+        const extraProperties = [
+            "createdAt",
+            "updatedAt",
+            "id"
+        ]
+        extraProperties.forEach(key => {
+            assert(key in actual);
+            delete actual[key];
+        });
+
+        // shouldn't actually have the user id for blogs, as all blogs are
+        // from the same user
+        expected = { ...existingExampleUser, blogs: [{ ...exampleBlog, likes: 0 }] }
+        assert.deepStrictEqual(actual, expected);
     });
 
 });
