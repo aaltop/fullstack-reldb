@@ -22,6 +22,33 @@ const existingExampleUser = {
     passwordHash: exampleHash
 };
 
+function compareActualAndExpected(actual)
+{
+    const extraProperties = [
+        "createdAt",
+        "updatedAt",
+        "id"
+    ]
+    extraProperties.forEach(key => {
+        assert(key in actual);
+        delete actual[key];
+    });
+
+    expected = {
+        ...exampleBlog,
+        likes: 0,
+        user: {
+            name: existingExampleUser.name,
+            username: existingExampleUser.username
+        }
+    };
+
+    assert.deepStrictEqual(
+        actual,
+        expected
+    );
+}
+
 let token = null;
 let exampleBlog = null;
 // create tables, get user token, set UserId in blog
@@ -68,29 +95,7 @@ describe("GET blogs", () => {
         const response = await api.get(baseUrl);
 
         const actual = response.body[0];
-        const extraProperties = [
-            "createdAt",
-            "updatedAt",
-            "id"
-        ]
-        extraProperties.forEach(key => {
-            assert(key in actual);
-            delete actual[key];
-        });
-
-        const expected = {
-            ...exampleBlog,
-            likes: 0,
-            user: {
-                name: existingExampleUser.name,
-                username: existingExampleUser.username
-            }
-        };
-
-        assert.deepStrictEqual(
-            actual,
-            expected
-        )
+        compareActualAndExpected(actual);
     });
 
 });
@@ -112,7 +117,7 @@ describe("POST blog", () => {
     test("Adds one blog", async () => {
 
         const startNum = await Blog.count({where: {}});
-
+        
         const response = await postBlog(exampleBlog).expect(200);
 
         const endNum = await Blog.count({where: {}});
@@ -124,14 +129,7 @@ describe("POST blog", () => {
         const response = await postBlog(exampleBlog).expect(200);
         
         const actual = response.body;
-        const expected = { ...exampleBlog, likes: 0 }
-
-        Object.keys(expected).forEach(val => {
-            assert.deepStrictEqual(
-                actual[val],
-                expected[val]
-            )
-        });
+        compareActualAndExpected(actual);
 
     });
 

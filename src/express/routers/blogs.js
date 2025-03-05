@@ -18,16 +18,19 @@ async function findUser(req)
     return { user, status };
 }
 
+function modelToJSON(blogModel)
+{
+    const retModel = blogModel.toJSON();
+    const { name, username } = retModel.User;
+    retModel.user = { name, username };
+    delete retModel.User;
+    return retModel;
+}
+
 router.route("/")
     .get(errorCatchWrapper(async (req, res) => {
         const blogs = await Blog.findAll({ include: "User" });
-        res.status(200).json(blogs.map(model => {
-            const retModel = model.toJSON();
-            const { name, username } = retModel.User;
-            retModel.user = { name, username };
-            delete retModel.User;
-            return retModel;
-        }));
+        res.status(200).json(blogs.map(modelToJSON));
     }))
     .post(errorCatchWrapper(async (req, res) => {
         userOrStatus = await findUser(req);
@@ -36,7 +39,8 @@ router.route("/")
         
         const user = userOrStatus.user;
         const newBlog = await Blog.create({ ...req.body, UserId: user.id });
-        res.status(200).json(newBlog.toJSON());
+        // seems to be the most sensible, least faff way of including User
+        res.status(200).json(modelToJSON(await Blog.findByPk(newBlog.id, { include: "User" })));
     }));
 
 router.route("/:id")
