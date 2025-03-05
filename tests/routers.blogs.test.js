@@ -1,5 +1,6 @@
 const supertest = require("supertest");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const { describe, test, after, beforeEach, before, afterEach } = require("node:test");
 const assert = require("node:assert");
@@ -8,6 +9,7 @@ const app = require("../src/app");
 const { Blog, User } = require("../src/sequelize/models.js");
 const sequelize = require("../src/sequelize/connection");
 const { createBearerString } = require("../src/utils/http.js");
+const { getSettledError } = require("../src/utils/promise.js");
 
 const api = supertest(app);
 const baseUrl = "/api/blogs";
@@ -147,18 +149,32 @@ describe("POST blog", () => {
 
         await api.post(baseUrl).send(exampleBlog).expect(401);
 
+        
         const invalidValues = [
             1,
             1.4,
             [1,2,3],
             { some: "value" },
             null,
-            undefined
+            undefined,
+            jwt.sign({ username: "some@user.com" }, "1234321SomesecretstringAAA", { noTimestamp: true })
         ];
 
-        await Promise.allSettled(invalidValues.map(val => {
+        const result = await Promise.allSettled(invalidValues.map(val => {
+            if (!val) {
+                // sending null and undefined too, otherwise they
+                // get replaced by the actual token
+                return api.post(baseUrl)
+                    .set("authorization", createBearerString(val))
+                    .send(exampleBlog)
+                    .expect(401);
+            }
             return postBlog(exampleBlog, val).expect(401);
         }));
+
+        const settledError = getSettledError(result, invalidValues)
+
+        if (settledError.rejections) throw new Error(settledError.rejectReason);
 
     });
 });
