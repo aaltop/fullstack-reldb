@@ -172,7 +172,7 @@ describe("POST blog", () => {
             return postBlog(exampleBlog, val).expect(401);
         }));
 
-        const settledError = getSettledError(result, invalidValues)
+        const settledError = getSettledError(result, invalidValues);
 
         if (settledError.rejections) throw new Error(settledError.rejectReason);
 
@@ -186,14 +186,20 @@ describe("DELETE blog", () => {
         await Blog.create(exampleBlog);
     });
 
+    function deleteBlog(id, localToken)
+    {
+        localToken ??= token;
+        return api.delete(`${baseUrl}/${id}`)
+            .set("authorization", createBearerString(localToken));
+    }
+
     test("Removes one blog", async () => {
 
         const startNum = await Blog.count({ where: {} });
 
         const foundBlog = await Blog.findOne();
 
-        await api.delete(`${baseUrl}/${foundBlog.get("id")}`)
-            .expect(204);
+        await deleteBlog(foundBlog.id).expect(204);
 
         const endNum = await Blog.count({ where: {} });
         assert.strictEqual(endNum, startNum - 1);
@@ -203,14 +209,44 @@ describe("DELETE blog", () => {
     test("Removes matching index", async () => {
 
         const foundBlog = await Blog.findOne();
+        const id = foundBlog.get("id");
 
-        const pk = foundBlog.get("id");
+        await deleteBlog(id).expect(204);
 
-        await api.delete(`${baseUrl}/${pk}`)
-            .expect(204);
-
-        const nullBlog = await Blog.findByPk(pk);
+        const nullBlog = await Blog.findByPk(id);
         assert(!nullBlog);
+
+    });
+
+    test("Returns 401 for invalid tokens or missing auth", async () => {
+
+        const foundBlog = await Blog.findOne();
+        const id = foundBlog.get("id");
+
+        const invalidValues = [
+            1,
+            1.4,
+            [1,2,3],
+            { some: "value" },
+            null,
+            undefined,
+            jwt.sign({ username: "some@user.com" }, "1234321SomesecretstringAAA", { noTimestamp: true })
+        ];
+
+        const promises = [api.delete(`${baseUrl}/${id}`).expect(401)].concat(invalidValues.map(val => {
+            if (!val) {
+                // sending null and undefined too, otherwise they
+                // get replaced by the actual token
+                return api.delete(`${baseUrl}/${id}`)
+                    .set("authorization", createBearerString(val))
+                    .expect(401);
+            }
+            return deleteBlog(id, val).expect(401);
+        }));
+        const result = await Promise.allSettled(promises);
+
+        const settledError = getSettledError(result, ["no auth"].concat(invalidValues));
+        if (settledError.rejections) throw new Error(settledError.rejectReason);
 
     });
 
