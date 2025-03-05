@@ -81,7 +81,7 @@ describe("GET users", () => {
 
         // shouldn't actually have the user id for blogs, as all blogs are
         // from the same user
-        expected = { ...existingExampleUser, blogs: [{ ...exampleBlog, likes: 0 }] }
+        expected = { ...exampleUser, blogs: [{ ...exampleBlog, likes: 0 }] }
         assert.deepStrictEqual(actual, expected);
     });
 

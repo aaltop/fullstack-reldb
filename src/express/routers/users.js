@@ -21,6 +21,7 @@ router.route("/")
             });
             retUser.blogs = blogs;
             delete retUser.Blogs;
+            delete retUser.passwordHash;
             return retUser;
         }));
     }))
