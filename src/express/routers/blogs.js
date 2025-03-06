@@ -1,4 +1,5 @@
 const express = require("express");
+const { Op } = require("sequelize");
 
 const { Blog, User } = require("../../sequelize/models.js");
 const { errorCatchWrapper } = require("../utils");
@@ -29,7 +30,16 @@ function modelToJSON(blogModel)
 
 router.route("/")
     .get(errorCatchWrapper(async (req, res) => {
-        const blogs = await Blog.findAll({ include: "User" });
+
+        let where = {};
+        console.log(req.query)
+        if (req.query.search) {
+            where.title = {
+                [Op.iLike]: `%${req.query.search}%`
+            }
+        }
+
+        const blogs = await Blog.findAll({ include: "User", where });
         res.status(200).json(blogs.map(modelToJSON));
     }))
     .post(errorCatchWrapper(async (req, res) => {

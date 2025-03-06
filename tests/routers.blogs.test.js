@@ -98,6 +98,39 @@ describe("GET blogs", () => {
         compareActualAndExpected(actual);
     });
 
+    describe("Search functionality", () => {
+
+        test("Search words bring up relevant items based on title", async () => {
+            await Blog.create(exampleBlog);
+            await Blog.create({ ...exampleBlog, title: "Something else" });
+    
+            const response = await api.get(baseUrl)
+                .query({
+                    search: "this is"
+                })
+                .expect(200);
+    
+            assert.strictEqual(response.body.length, 1);
+            compareActualAndExpected(response.body[0]);
+        });
+    
+        test("Search word is case insensitive", async () => {
+            await Blog.create(exampleBlog);
+            await Blog.create({ ...exampleBlog, title: "Something else" });
+    
+            const response = await api.get(baseUrl)
+                .query({
+                    search: "ThIS iS"
+                })
+                .expect(200);
+    
+            assert.strictEqual(response.body.length, 1);
+            compareActualAndExpected(response.body[0]);
+        });
+
+    })
+
+
 });
 
 describe("POST blog", () => {
