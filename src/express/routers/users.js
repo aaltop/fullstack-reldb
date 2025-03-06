@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.route("/")
     .get(errorCatchWrapper(async (req, res) => {
-        const users = await User.findAll({ include: "Blogs" });
+        const users = await User.findAll({ include: "Blogs", attributes: { exclude: "passwordHash" } });
 
         res.json(users.map(user => {
             const retUser = user.toJSON();
@@ -21,7 +21,6 @@ router.route("/")
             });
             retUser.blogs = blogs;
             delete retUser.Blogs;
-            delete retUser.passwordHash;
             return retUser;
         }));
     }))
