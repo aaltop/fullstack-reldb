@@ -10,6 +10,7 @@ const { Blog, User } = require("../src/sequelize/models.js");
 const sequelize = require("../src/sequelize/connection");
 const { createBearerString } = require("../src/utils/http.js");
 const { getSettledError } = require("../src/utils/promise.js");
+const mathUtils = require("../src/utils/math.js");
 
 const api = supertest(app);
 const baseUrl = "/api/blogs";
@@ -39,7 +40,7 @@ function compareActualAndExpected(actual, expectedBlog, expectedUser)
 
     expected = {
         ...expectedBlog,
-        likes: 0,
+        likes: expectedBlog.likes ? expectedBlog.likes : 0,
         user: {
             name: expectedUser.name,
             username: expectedUser.username
@@ -99,6 +100,25 @@ describe("GET blogs", () => {
 
         const actual = response.body[0];
         compareActualAndExpected(actual);
+    });
+
+    test("Returns blogs sorted in descending order of likes", async () => {
+
+        const blogs = [
+            { ...exampleBlog, likes: 100 },
+            { ...exampleBlog, likes: 234 },
+            { ...exampleBlog, likes: 78 }
+        ].concat(Array(7).fill().map(() => {
+            // some random values too, a little more robust that way
+            return { ...exampleBlog, likes: mathUtils.randInt(0, 300) }
+        }));
+
+        const expectedOrder = mathUtils.argSort(blogs, (a,b) => b.likes - a.likes);
+        await Promise.all(blogs.map(bl => Blog.create(bl)));
+        
+        const response = await api.get(baseUrl);
+        assert.strictEqual(response.body.length, blogs.length);
+        response.body.forEach((expec, idx) => compareActualAndExpected(expec, blogs[expectedOrder[idx]]));
     });
 
     describe("Search functionality", () => {

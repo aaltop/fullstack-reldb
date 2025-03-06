@@ -42,7 +42,11 @@ router.route("/")
             };
         }
 
-        const blogs = await Blog.findAll({ include: "User", where });
+        const blogs = await Blog.findAll({
+            include: "User",
+            where,
+            order: [["likes", "DESC"]]
+        });
         res.status(200).json(blogs.map(modelToJSON));
     }))
     .post(errorCatchWrapper(async (req, res) => {
