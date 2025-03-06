@@ -32,11 +32,14 @@ router.route("/")
     .get(errorCatchWrapper(async (req, res) => {
 
         let where = {};
-        console.log(req.query)
         if (req.query.search) {
-            where.title = {
-                [Op.iLike]: `%${req.query.search}%`
-            }
+            const op = { [Op.iLike]: `%${req.query.search}%` };
+            where = {
+                [Op.or]: {
+                    title: op,
+                    author: op
+                }
+            };
         }
 
         const blogs = await Blog.findAll({ include: "User", where });

@@ -22,7 +22,7 @@ const existingExampleUser = {
     passwordHash: exampleHash
 };
 
-function compareActualAndExpected(actual)
+function compareActualAndExpected(actual, expectedBlog, expectedUser)
 {
     const extraProperties = [
         "createdAt",
@@ -34,12 +34,15 @@ function compareActualAndExpected(actual)
         delete actual[key];
     });
 
+    expectedBlog ??= exampleBlog;
+    expectedUser ??= existingExampleUser;
+
     expected = {
-        ...exampleBlog,
+        ...expectedBlog,
         likes: 0,
         user: {
-            name: existingExampleUser.name,
-            username: existingExampleUser.username
+            name: expectedUser.name,
+            username: expectedUser.username
         }
     };
 
@@ -112,6 +115,21 @@ describe("GET blogs", () => {
     
             assert.strictEqual(response.body.length, 1);
             compareActualAndExpected(response.body[0]);
+        });
+
+        test("Search words bring up relevant items based on author name", async () => {
+            await Blog.create(exampleBlog);
+            const otherBlog = { ...exampleBlog, author: "Dan Abramov" };
+            await Blog.create(otherBlog);
+    
+            const response = await api.get(baseUrl)
+                .query({
+                    search: "n ab"
+                })
+                .expect(200);
+    
+            assert.strictEqual(response.body.length, 1);
+            compareActualAndExpected(response.body[0], otherBlog);
         });
     
         test("Search word is case insensitive", async () => {
