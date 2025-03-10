@@ -11,6 +11,7 @@ const sequelize = require("../src/sequelize/connection");
 const { createBearerString } = require("../src/utils/http.js");
 const { getSettledError } = require("../src/utils/promise.js");
 const mathUtils = require("../src/utils/math.js");
+const { forceSync } = require("../src/sequelize/migrations.js");
 
 const api = supertest(app);
 const baseUrl = "/api/blogs";
@@ -57,8 +58,9 @@ let token = null;
 let exampleBlog = null;
 // create tables, get user token, set UserId in blog
 before(async () => {
-    await Blog.sync({ force: true, match: /testing/ });
-    await User.sync({ force: true, match: /testing/ });
+    await forceSync();
+    await Blog.destroy({ where: {} });
+    await User.destroy({ where: {} });
 
     const createdUser = await User.create(existingExampleUser);
     response = await api.post("/api/login")

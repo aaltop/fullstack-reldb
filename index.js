@@ -1,8 +1,8 @@
 require("dotenv").config();
 
-const sequelize = require("./src/sequelize/connection");
-const app = require("./src/app");
-
+const sequelize = require("./src/sequelize/connection.js");
+const { upAll } = require("./src/sequelize/migrations.js");
+const app = require("./src/app.js");
 
 async function main()
 {
@@ -10,12 +10,9 @@ async function main()
         console.log("Testing Sequelize connection...");
         await sequelize.authenticate();
 
-        // I guess it technically shouldn't hurt
-        // to synchronise in production either
-        if (process.env.NODE_ENV !== "production") {
-            console.log("\nSynchronizing sequelize...");
-            await sequelize.sync();
-        }
+        console.log("\nPerforming migrations...");
+        const migrations = await upAll();
+        console.log("Run migrations:", migrations);
     } catch (error) {
         console.log("Sequelize connection error:", error);
     }

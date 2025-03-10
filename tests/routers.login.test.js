@@ -5,6 +5,7 @@ const assert = require("node:assert");
 
 const app = require("../src/app");
 const { User } = require("../src/sequelize/models.js");
+const { forceSync } = require("../src/sequelize/migrations.js");
 
 
 const api = supertest(app);
@@ -15,6 +16,10 @@ const newExampleuser = {
     password: "Ap3rfectlyv@lidpassword"
 
 };
+
+before(async () => {
+    await forceSync();
+});
 
 describe("POST login", () => {
 

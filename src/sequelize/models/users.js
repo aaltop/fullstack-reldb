@@ -2,10 +2,7 @@ const { DataTypes } = require("sequelize");
 
 const sequelize = require("../connection");
 
-
-
-const User = sequelize.define(
-    "User",
+const attributes = [
     {
         id: {
             type: DataTypes.INTEGER,
@@ -29,9 +26,14 @@ const User = sequelize.define(
             allowNull: false
         }
     },
+];
+
+const User = sequelize.define(
+    "User",
+    Object.assign({}, ...attributes),
     {
         underscored: true
     }
 );
 
-module.exports = User;
+module.exports = { User, attributes };

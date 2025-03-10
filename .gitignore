@@ -9,3 +9,5 @@
 !index.js
 !src
 !tests
+!migrations
+!scripts

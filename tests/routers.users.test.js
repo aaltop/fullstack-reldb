@@ -6,6 +6,7 @@ const assert = require("node:assert");
 
 const app = require("../src/app");
 const { User, Blog } = require("../src/sequelize/models.js");
+const { forceSync } = require("../src/sequelize/migrations.js");
 
 const api = supertest(app);
 
@@ -39,15 +40,16 @@ async function createUserAndBlog(user, blog)
 }
 
 before(async () => {
-    await User.sync({ force: true, match: /testing/ });
-    await Blog.sync({ force: true, match: /testing/ });
+    await forceSync();
+    await Blog.destroy({ where: {} });
+    await User.destroy({ where: {} });
 });
 
 describe("GET users", () => {
 
     beforeEach(async () => {
-        await User.destroy({ where: {} });
         await Blog.destroy({ where: {} });
+        await User.destroy({ where: {} });
     });
 
     test("Returns empty list when no users", async () => {
@@ -83,6 +85,11 @@ describe("GET users", () => {
         // from the same user
         expected = { ...exampleUser, blogs: [{ ...exampleBlog, likes: 0 }] }
         assert.deepStrictEqual(actual, expected);
+    });
+
+    after(async () => {
+        await Blog.destroy({ where: {} });
+        await User.destroy({ where: {} });
     });
 
 });

@@ -1,11 +1,9 @@
 const { DataTypes, ValidationError } = require("sequelize");
 
 const sequelize = require("../connection");
+const { User } = require("./users.js");
 
-
-
-const Blog = sequelize.define(
-    "Blog",
+const attributes = [
     {
         id: {
             type: DataTypes.INTEGER,
@@ -39,11 +37,16 @@ const Blog = sequelize.define(
                     };
                 },
             }
-        }
+        },
     },
+];
+
+const Blog = sequelize.define(
+    "Blog",
+    Object.assign({}, ...attributes),
     {
         underscored: true
     }
 );
 
-module.exports = Blog;
+module.exports = { Blog, attributes };
