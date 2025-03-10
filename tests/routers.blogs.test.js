@@ -59,8 +59,6 @@ let exampleBlog = null;
 // create tables, get user token, set UserId in blog
 before(async () => {
     await forceSync();
-    await Blog.destroy({ where: {} });
-    await User.destroy({ where: {} });
 
     const createdUser = await User.create(existingExampleUser);
     response = await api.post("/api/login")

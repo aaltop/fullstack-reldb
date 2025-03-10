@@ -41,8 +41,6 @@ async function createUserAndBlog(user, blog)
 
 before(async () => {
     await forceSync();
-    await Blog.destroy({ where: {} });
-    await User.destroy({ where: {} });
 });
 
 describe("GET users", () => {
