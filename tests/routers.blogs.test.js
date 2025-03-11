@@ -55,6 +55,12 @@ function compareActualAndExpected(actual, expectedBlog, expectedUser)
 }
 
 let token = null;
+const newExampleBlog = {
+    author: "author Bloke",
+    title: "This is a title",
+    url: "example.com",
+    year: (new Date()).getFullYear()
+};
 let exampleBlog = null;
 // create tables, get user token, set UserId in blog
 before(async () => {
@@ -68,9 +74,7 @@ before(async () => {
     token = response.body.token;
     assert(typeof token === "string");
     exampleBlog = {
-        author: "author Bloke",
-        title: "This is a title",
-        url: "example.com",
+        ...newExampleBlog,
         UserId: createdUser.id
     };
 });
@@ -189,7 +193,7 @@ describe("POST blog", () => {
 
         const startNum = await Blog.count({where: {}});
         
-        const response = await postBlog(exampleBlog).expect(200);
+        const response = await postBlog(newExampleBlog).expect(200);
 
         const endNum = await Blog.count({where: {}});
         assert.strictEqual(endNum, startNum+1);
@@ -197,7 +201,7 @@ describe("POST blog", () => {
 
     test("Returns blog matching sent blog", async () => {
 
-        const response = await postBlog(exampleBlog).expect(200);
+        const response = await postBlog(newExampleBlog).expect(200);
         
         const actual = response.body;
         compareActualAndExpected(actual);
@@ -213,7 +217,6 @@ describe("POST blog", () => {
             },
             title: 100,
             url: [1,2,3],
-            UserId: "Not an integer"
         };
 
         async function testPost(sentBlog)
@@ -221,17 +224,44 @@ describe("POST blog", () => {
             await postBlog(sentBlog).expect(400);
         }
 
-        await testPost({});
-        await testPost({...exampleBlog, author: invalidBlog.author});
-        await testPost({...exampleBlog, title: invalidBlog.title});
-        await testPost({...exampleBlog, url: invalidBlog.url});
-        await testPost({...exampleBlog, url: invalidBlog.UserId});
+        const invalidYears = [
+            1776,
+            1990,
+            1991.11111,
+            2030,
+            (new Date()).getFullYear()+1,
+            null,
+            undefined,
+            "2000"
+        ];
+        const invalidBlogs = [
+            {},
+            {...newExampleBlog, author: invalidBlog.author},
+            {...newExampleBlog, title: invalidBlog.title},
+            {...newExampleBlog, url: invalidBlog.url},
+        ].concat(invalidYears.map(year => {
+            return { ...newExampleBlog, year }
+        }));
+
+        const settled = await Promise.allSettled(invalidBlogs.map(blog => testPost(blog)));
+        const settledError = getSettledError(
+            settled,
+            [
+                "empty object",
+                invalidBlog.author,
+                invalidBlog.title,
+                invalidBlog.url,
+                invalidBlog.UserId,
+            ].concat(invalidYears)
+        );
+
+        if (settledError.rejections) throw new Error(settledError.rejectReason);
 
     });
 
     test("Returns 401 for invalid tokens or missing auth", async () => {
 
-        await api.post(baseUrl).send(exampleBlog).expect(401);
+        await api.post(baseUrl).send(newExampleBlog).expect(401);
 
         
         const invalidValues = [
@@ -250,10 +280,10 @@ describe("POST blog", () => {
                 // get replaced by the actual token
                 return api.post(baseUrl)
                     .set("authorization", createBearerString(val))
-                    .send(exampleBlog)
+                    .send(newExampleBlog)
                     .expect(401);
             }
-            return postBlog(exampleBlog, val).expect(401);
+            return postBlog(newExampleBlog, val).expect(401);
         }));
 
         const settledError = getSettledError(result, invalidValues);

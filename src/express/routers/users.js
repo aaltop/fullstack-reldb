@@ -16,8 +16,8 @@ router.route("/")
         res.json(users.map(user => {
             const retUser = user.toJSON();
             const blogs = retUser.Blogs.map(blog => {
-                const { title, author, url, likes } = blog;
-                return { title, author, url, likes };
+                const { title, author, url, likes, year } = blog;
+                return { title, author, url, likes, year };
             });
             retUser.blogs = blogs;
             delete retUser.Blogs;

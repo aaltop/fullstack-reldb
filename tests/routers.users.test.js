@@ -28,7 +28,8 @@ const existingExampleUser = {
 let exampleBlog = {
     author: "author Bloke",
     title: "This is a title",
-    url: "example.com"
+    url: "example.com",
+    year: (new Date()).getFullYear()
 };
 const baseUrl = "/api/users";
 

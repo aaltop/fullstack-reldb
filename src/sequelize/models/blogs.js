@@ -39,6 +39,22 @@ const attributes = [
             }
         },
     },
+    {
+        year: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            validate: {
+                isValidInternetYear: val => {
+                    if (!Number.isSafeInteger(val)) {
+                        throw new Error("Blog.year should be an integer");
+                    };
+                    if (val < 1991 || val > (new Date()).getFullYear()) {
+                        throw new Error("Blog.year should be between 1991 and the current year (both inclusive)")
+                    };
+                }
+            }
+        }
+    }
 ];
 
 const Blog = sequelize.define(

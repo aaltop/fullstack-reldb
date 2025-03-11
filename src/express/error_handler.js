@@ -5,8 +5,8 @@ const jwtHandler = require("./error_handlers/jwt.js");
 
 function catchAll(err, req, res, next)
 {
-    res.status(500).send("Something went wrong.");
     console.log("Express error:", err);
+    return res.status(500).send("Something went wrong.");
 }
 
 module.exports = [
