@@ -38,6 +38,7 @@ router.route("/")
         const newUser = { name, username, passwordHash: hash };
         await User.create(newUser);
 
+        delete newUser.passwordHash;
         res.json(newUser);
     }));
 
@@ -54,7 +55,8 @@ router.route("/:username")
         if (!user) return res.status(404).end();
 
         user.set("username", newUsername);
-        const modifiedUser = await user.save();
+        const modifiedUser = (await user.save()).toJSON();
+        delete modifiedUser.passwordHash;
         res.json(modifiedUser);
     }))
 

@@ -99,14 +99,14 @@ describe("POST users", () => {
         await User.destroy({ where: {} });
     });
 
-    test("Returns username, name, and password hash", async () => {
+    test("Returns username and name", async () => {
 
         const response = await api.post(baseUrl)
             .send(newExampleUser)
             .expect(200);
 
-        const { username, name, passwordHash } = response.body;
-        assert(typeof passwordHash === "string");
+        const { username, name } = response.body;
+        assert(!(response.body.passwordHash));
         assert.deepStrictEqual({ username, name }, exampleUser);
     });
 
@@ -210,9 +210,7 @@ describe("Change username", () => {
 
         user = await User.findByPk(user.id);
 
-
         assert.strictEqual(response.body.username, newUsername);
-
     });
 
     test("Changes updatedAt timestamp", async () => {
@@ -230,6 +228,27 @@ describe("Change username", () => {
         assert(!!oldStamp && !!user.updatedAt);
         assert.notStrictEqual(oldStamp, user.updatedAt);
 
+    });
+
+    test("Returns only the expected information", async () => {
+        let user = await User.findOne();
+
+        const newUsername = "DaveyMan@DavesSite.com";
+        const response = await api.put(`${baseUrl}/${user.username}`)
+            .send({ username: newUsername })
+            .expect(200);
+
+        const expectedProperties = [
+            "updatedAt",
+            "username",
+            "name",
+            "id",
+            "createdAt",
+        ].toSorted();
+
+        const actualProperties = Object.keys(response.body).toSorted();
+
+        assert.deepStrictEqual(actualProperties, expectedProperties);
     });
 
     test("Returns 400 for invalid bodies", async () => {
