@@ -30,7 +30,7 @@ const attributes = [
 ];
 
 const ReadingList = sequelize.define(
-    "ReadingList",
+    "readingList",
     Object.assign({}, ...attributes),
     {
         underscored: true

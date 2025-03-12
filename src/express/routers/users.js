@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 
 const { errorCatchWrapper } = require("../utils");
-const { User, Blog } = require("../../sequelize/models.js");
+const { User, Blog, ReadingList } = require("../../sequelize/models.js");
 const { checkPassword } = require("../../utils/validation/string");
 
 
@@ -62,6 +62,43 @@ router.route("/:username")
         const modifiedUser = (await user.save()).toJSON();
         delete modifiedUser.passwordHash;
         res.json(modifiedUser);
+    }));
+
+router.route("/:id")
+    .get(errorCatchWrapper(async (req, res) => {
+        const { id } = req.params;
+
+        const user = await User.findByPk(
+            id,
+            {
+                attributes: [
+                    "name",
+                    "username"
+                ],
+                include: {
+                    model: ReadingList,
+                    attributes: ["BlogId"],
+                    include: {
+                        model: Blog,
+                        attributes: [
+                            "id",
+                            "url",
+                            "title",
+                            "author",
+                            "likes",
+                            "year"
+                        ]
+                    }
+                }
+            }
+        );
+        if (!user) return res.status(404).json({ error: "No user with given id" });
+
+        const jsonUser = user.toJSON();
+        jsonUser.readingLists = jsonUser.readingLists.map(val => {
+            return val.Blog;
+        });
+        res.status(200).json(jsonUser);
     }))
 
 module.exports = router;

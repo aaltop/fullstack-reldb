@@ -5,8 +5,9 @@ const { before, beforeEach, describe, test, after } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const { User, Blog } = require("../src/sequelize/models.js");
+const { User, Blog, ReadingList } = require("../src/sequelize/models.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
+const { getSettledError } = require("../src/utils/promise.js");
 
 const api = supertest(app);
 
@@ -293,3 +294,99 @@ describe("Change username", () => {
     });
 
 });
+
+describe("GET users/:id", () => {
+
+    beforeEach(async () => {
+        await ReadingList.destroy({ where: {} });
+        await Blog.destroy({ where: {} });
+        await User.destroy({ where: {} });
+    });
+
+    function getUser(id)
+    {
+        return api.get(`${baseUrl}/${id}`);
+    }
+
+    test("Returns name, username, and readinglist", async () => {
+        const {id: userId} = await User.create(existingExampleUser,);
+
+        const user = await User.findByPk(
+            userId,
+            {
+                include: {
+                    model: ReadingList,
+                    include: {
+                        // shouldn't need to define the whole thing
+                        // as there's nothing there
+                        model: Blog
+                    }
+                }
+            }
+        );
+
+        console.log("user", user.toJSON())
+        const response = await getUser(user.id).expect(200);
+        
+        assert.deepStrictEqual(response.body, {
+            name: user.name,
+            username: user.username,
+            readingLists: user.readingLists
+        });
+    });
+
+    test("readinglist is empty list by default", async () => {
+        const user = await User.create(existingExampleUser);
+
+        const response = await getUser(user.id).expect(200);
+        
+        assert.deepStrictEqual(response.body.readingLists, []);
+    });
+
+    test("readinglist contains marked blog", async () => {
+        const { user, blog } = await createUserAndBlog(existingExampleUser, exampleBlog);
+
+        await ReadingList.create({ UserId: user.id, BlogId: blog.id });
+
+        const response = await getUser(user.id).expect(200);
+        const readinglist = response.body.readingLists;
+
+        const expectedProperties = [
+            "id",
+            "url",
+            "title",
+            "author",
+            "likes",
+            "year"
+        ];
+
+        const expected = Object.fromEntries(Object.entries(blog.toJSON()).filter(([key, _value]) => {
+            return expectedProperties.includes(key);
+        }));
+
+        assert.strictEqual(readinglist.length, 1);
+        assert.deepStrictEqual(readinglist[0], expected);
+    });
+
+    test("Returns 404 for nonexistent id", async () => {
+        await getUser(200000).expect(404);
+    });
+
+    test("Returns 400 for invalid id", async () => {
+
+        const invalidIds = [
+            undefined,
+            null,
+            123.123,
+            "hello"
+        ];
+
+        const settled = await Promise.allSettled(invalidIds.map( (id) => {
+            return getUser(id).expect(400);
+        }));
+
+        const settledError = getSettledError(settled, invalidIds);
+        if (settledError.rejections) throw new Error(settledError.rejectReason);
+    });
+
+})
