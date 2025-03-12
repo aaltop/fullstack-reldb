@@ -1,5 +1,6 @@
-const { User } = require("./models/users");
-const { Blog } = require("./models/blogs");
+const { User } = require("./models/users.js");
+const { Blog } = require("./models/blogs.js");
+const { ReadingList } = require("./models/reading_list.js");
 
 
 User.hasMany(Blog);
@@ -12,7 +13,11 @@ Blog.belongsTo(
     }
 );
 
+User.hasMany(ReadingList);
+ReadingList.belongsTo(User);
+Blog.hasMany(ReadingList);
+ReadingList.belongsTo(Blog);
+
 module.exports = {
-    User,
-    Blog
+    User, Blog, ReadingList
 }

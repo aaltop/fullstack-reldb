@@ -76,7 +76,7 @@ const dateAts = {
         type: DataTypes.DATE,
         defaultValue: new Date()
     }
-}
+};
 
 module.exports = {
     up: ({ context: queryInterface }, Sequelize) => {

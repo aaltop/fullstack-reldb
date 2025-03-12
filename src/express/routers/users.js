@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 
 const { errorCatchWrapper } = require("../utils");
-const { User } = require("../../sequelize/models.js");
+const { User, Blog } = require("../../sequelize/models.js");
 const { checkPassword } = require("../../utils/validation/string");
 
 
@@ -11,15 +11,19 @@ const router = express.Router();
 
 router.route("/")
     .get(errorCatchWrapper(async (req, res) => {
-        const users = await User.findAll({ include: "Blogs", attributes: { exclude: "passwordHash" } });
+        const users = await User.findAll({
+            include: [
+                {
+                    model: Blog,
+                    attributes: ["title", "author", "url", "likes", "year"],
+                }
+            ],
+            attributes: { exclude: "passwordHash" },
+        });
 
         res.json(users.map(user => {
             const retUser = user.toJSON();
-            const blogs = retUser.Blogs.map(blog => {
-                const { title, author, url, likes, year } = blog;
-                return { title, author, url, likes, year };
-            });
-            retUser.blogs = blogs;
+            retUser.blogs = retUser.Blogs;
             delete retUser.Blogs;
             return retUser;
         }));
