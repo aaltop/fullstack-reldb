@@ -2,22 +2,10 @@ const express = require("express");
 const { Op } = require("sequelize");
 
 const { Blog, User } = require("../../sequelize/models.js");
-const { errorCatchWrapper } = require("../utils");
-const { usernameFromBearerString } = require("../utils.js");
+const { errorCatchWrapper, findUser} = require("../utils");
 
 
 const router = express.Router();
-
-async function findUser(req)
-{
-    const bearerResult = usernameFromBearerString(req.header("Authorization"));
-    if (bearerResult.error) throw bearerResult.error;
-    
-    const user = await User.findOne({ where: { username: bearerResult.username }});
-    let status = undefined;
-    if (!user) status = res.status(400).json({ error: "No user matches given token" });
-    return { user, status };
-}
 
 function modelToJSON(blogModel)
 {

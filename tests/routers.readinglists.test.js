@@ -1,20 +1,25 @@
 const supertest = require("supertest");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const { describe, test, after, beforeEach, before, afterEach } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
 const { Blog, User, ReadingList } = require("../src/sequelize/models.js");
-const { getSettledError } = require("../src/utils/promise.js");
+const { ensureAllSettled } = require("../src/utils/testing.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
+const { createBearerString } = require("../src/utils/http.js");
 
 const api = supertest(app);
 const baseUrl = "/api/readinglists";
 
+const examplePassword = "AperfectlyV4l!dpassword";
+const exampleHash = bcrypt.hashSync(examplePassword, 10);
 const existingExampleUser = {
     name: "Dave Example",
     username: "DaveyBoy@DavesSite.com",
-    passwordHash: "exampleHash"
+    passwordHash: exampleHash
 };
 
 let token = null;
@@ -30,9 +35,15 @@ let exampleReading = null;
 before(async () => {
     await forceSync();
     const createdUser = await User.create(existingExampleUser);
+    const response = await api.post("/api/login")
+        .send({ username: existingExampleUser.username, password: examplePassword })
+        .expect(200);
+
+    token = response.body.token;
+    assert(typeof token === "string");
     exampleBlog = {
         ...newExampleBlog,
-        UserId: createdUser.id
+        userId: createdUser.id
     };
     const createdBlog = await Blog.create(exampleBlog);
     exampleReading = {
@@ -76,14 +87,11 @@ describe("POST readinglists", () => {
             { userId: exampleReading.userId+1, blogId: exampleReading.blogId+1}
         ]
 
-        const settled = await Promise.allSettled(invalidReadings.map(val => {
+        await ensureAllSettled(invalidReadings, val => {
             return api.post(baseUrl)
                 .send(val)
                 .expect(400);
-        }));
-
-        const settledError = getSettledError(settled, invalidReadings);
-        if (settledError.rejections) throw new Error(settledError.rejectReason);
+        });
     });
 
     test("Returns 400 for missing values in sent info", async () => {
@@ -95,13 +103,109 @@ describe("POST readinglists", () => {
             { blogId: exampleReading.blogId },
         ]
 
-        const settled = await Promise.allSettled(invalidReadings.map(val => {
+        await ensureAllSettled(invalidReadings, val => {
             return api.post(baseUrl)
                 .send(val)
                 .expect(400);
-        }));
+        });
+    });
+});
 
-        const settledError = getSettledError(settled, invalidReadings);
-        if (settledError.rejections) throw new Error(settledError.rejectReason);
+describe("POST readinglists/:id", () => {
+    beforeEach(async () => {
+        await ReadingList.destroy({ where: {} });
+    });
+
+    function postReadStatus(id, sentData, localToken)
+    {
+        localToken ??= token;
+        return api.post(`${baseUrl}/${id}`)
+            .set("authorization", createBearerString(localToken))
+            .send(sentData);
+    }
+
+    test("Sets as read", async () => {
+        const { id, read: startRead } = await ReadingList.create(exampleReading);
+        assert(!startRead);
+        await postReadStatus(id, { read: true }).expect(200);
+        const { read: endRead } = await ReadingList.findByPk(id);
+        assert(endRead);
+    });
+
+    test("Returns 404 for nonexistent id", async () => {
+        // should be nothing in table, so any old id'll do
+        await postReadStatus(1, { read: true }).expect(404);
+    });
+
+    test("Returns 400 for invalid id", async () => {
+        await ReadingList.create(exampleReading);
+        const invalidIds = [
+            undefined,
+            null,
+            123.123,
+            "hello"
+        ];
+
+        await ensureAllSettled(invalidIds, id => {
+            return postReadStatus(id, { read: true }).expect(400);
+        });
+    });
+
+    test("Returns 400 for invalid sent data", async () => {
+        const { id } = await ReadingList.create(exampleReading);
+        const invalidData = [
+            {},
+            [],
+            [12,3],
+            "hello",
+            { read: 1 }
+        ];
+
+        await ensureAllSettled(invalidData, data => {
+            return postReadStatus(id, data).expect(400);
+        });
+    });
+
+    test("Returns 401 for invalid auth headers", async () => {
+        const { id } = await ReadingList.create(exampleReading);
+        const invalidTokens = [
+            "no auth",
+            "basic auth",
+            "incorrect formatting",
+            1,
+            1.4,
+            [1,2,3],
+            { some: "value" },
+            null,
+            undefined,
+            jwt.sign({ username: "some@user.com" }, "1234321SomesecretstringAAA", { noTimestamp: true })
+        ];
+
+        
+
+        await ensureAllSettled(invalidTokens, val => {
+            if (val === "no auth") {
+                return api.post(`${baseUrl}/${id}`).send({ read: true }).expect(401);
+            }
+            if (val === "basic auth") {
+                return api.post(`${baseUrl}/${id}`)
+                    .send({ read: true })
+                    .set("authorization", `Basic ${token}`)
+                    .expect(401);
+            }
+            if (val === "incorrect formatting") {
+                return api.post(`${baseUrl}/${id}`)
+                    .send({ read: true })
+                    .set("authorization", `Bearer null`)
+                    .expect(401);
+            }
+            if (!val) {
+                return api.post(`${baseUrl}/${id}`)
+                    .send({ read: true })
+                    .set("authorization", createBearerString(val))
+                    .expect(401);
+            }
+            return postReadStatus(id, { read: true }, val).expect(401);
+        })
     })
-})
+});

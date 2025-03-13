@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 function errorHandler(error, req, res, next)
 {
     if (error instanceof jwt.JsonWebTokenError) {
-        if (error.message.includes("jwt must be provided")) {
+        if (error.message.includes("jwt must be provided") || error.message.includes("jwt malformed")) {
             return res.status(401).json({ error: "No proper bearer token provided"});
         } else if (error.message.includes("invalid signature")) {
             return res.status(401).json({ error: "Invalid token provided" });

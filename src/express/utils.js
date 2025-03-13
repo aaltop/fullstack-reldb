@@ -2,6 +2,7 @@ const { Request, RequestHandler} = require("express");
 
 const { parseBearerString } = require("../utils/http.js");
 const { verifyToken } = require("../utils/jwt.js");
+const { User } = require("../sequelize/models.js");
 
 /**
  * Wraps an express RequestHandler with a try...catch that will
@@ -58,8 +59,26 @@ function usernameFromBearerString(bearerString)
     }
 }
 
+/**
+ * Find a user based on the Authorization header's token. Return either
+ * the user or a status saying no user was found matching the given token.
+ * @param {*} req 
+ * @returns 
+ */
+async function findUser(req)
+{
+    const bearerResult = usernameFromBearerString(req.header("Authorization"));
+    if (bearerResult.error) throw bearerResult.error;
+    
+    const user = await User.findOne({ where: { username: bearerResult.username }});
+    let status = undefined;
+    if (!user) status = res.status(400).json({ error: "No user matches given token" });
+    return { user, status };
+}
+
 module.exports = {
     errorCatchWrapper,
     payloadFromBearerString,
-    usernameFromBearerString
+    usernameFromBearerString,
+    findUser
 };
