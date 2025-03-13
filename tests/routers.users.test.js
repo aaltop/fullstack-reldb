@@ -8,6 +8,7 @@ const app = require("../src/app");
 const { User, Blog, ReadingList } = require("../src/sequelize/models.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
 const { getSettledError } = require("../src/utils/promise.js");
+const { pickProperties } = require("../src/utils/object.js");
 
 const api = supertest(app);
 
@@ -342,10 +343,10 @@ describe("GET users/:id", () => {
         assert.deepStrictEqual(response.body.readingLists, []);
     });
 
-    test("readinglist contains marked blog", async () => {
+    test("readinglist contains marked blog and read status", async () => {
         const { user, blog } = await createUserAndBlog(existingExampleUser, exampleBlog);
 
-        await ReadingList.create({ userId: user.id, blogId: blog.id });
+        const readingLists = await ReadingList.create({ userId: user.id, blogId: blog.id });
 
         const response = await getUser(user.id).expect(200);
         const readinglist = response.body.readingLists;
@@ -359,9 +360,8 @@ describe("GET users/:id", () => {
             "year"
         ];
 
-        const expected = Object.fromEntries(Object.entries(blog.toJSON()).filter(([key, _value]) => {
-            return expectedProperties.includes(key);
-        }));
+        const expected = pickProperties(blog.toJSON(), expectedProperties);
+        expected.readingLists = [pickProperties(readingLists.toJSON(), ["read", "id"])];
 
         assert.strictEqual(readinglist.length, 1);
         assert.deepStrictEqual(readinglist[0], expected);

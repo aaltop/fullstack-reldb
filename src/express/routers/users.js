@@ -82,7 +82,14 @@ router.route("/:id")
                             "author",
                             "likes",
                             "year"
-                        ]
+                        ],
+                        include: {
+                            model: ReadingList,
+                            attributes: [
+                                "read",
+                                "id"
+                            ]
+                        }
                     }
                 }
             }
