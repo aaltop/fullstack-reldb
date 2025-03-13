@@ -1,5 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const { Op } = require("sequelize");
 
 const { errorCatchWrapper } = require("../utils");
 const { User, Blog, ReadingList } = require("../../sequelize/models.js");
@@ -63,6 +64,24 @@ router.route("/:id")
     .get(errorCatchWrapper(async (req, res) => {
         const { id } = req.params;
 
+        let where = undefined;
+        // query read
+        if (!(req.query.read === undefined)) {
+            let query;
+            const lowerCase = req.query.read.toLowerCase();
+            if (lowerCase === "true") {
+                query = true;
+            } else if (lowerCase === "false") {
+                query = false;
+            } else {
+                return res.status(400).json({ error: `invalid search query for 'read': ${req.query.read}`});
+            }
+            where = {};
+            where.read = {
+                [Op.is]: query
+            }
+        }
+
         const user = await User.findByPk(
             id,
             {
@@ -72,6 +91,7 @@ router.route("/:id")
                 ],
                 include: {
                     model: ReadingList,
+                    where,
                     attributes: ["blogId"],
                     include: {
                         model: Blog,

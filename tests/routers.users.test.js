@@ -9,6 +9,7 @@ const { User, Blog, ReadingList } = require("../src/sequelize/models.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
 const { getSettledError } = require("../src/utils/promise.js");
 const { pickProperties } = require("../src/utils/object.js");
+const { ensureAllSettled } = require("../src/utils/testing.js");
 
 const api = supertest(app);
 
@@ -309,6 +310,22 @@ describe("GET users/:id", () => {
         return api.get(`${baseUrl}/${id}`);
     }
 
+    function createReadingList(blog, readingListsRow)
+    {
+        const expectedProperties = [
+            "id",
+            "url",
+            "title",
+            "author",
+            "likes",
+            "year"
+        ];
+
+        const expected = pickProperties(blog, expectedProperties);
+        expected.readingLists = [pickProperties(readingListsRow, ["read", "id"])];
+        return expected;
+    }
+
     test("Returns name, username, and readinglist", async () => {
         const {id: userId} = await User.create(existingExampleUser,);
 
@@ -360,8 +377,7 @@ describe("GET users/:id", () => {
             "year"
         ];
 
-        const expected = pickProperties(blog.toJSON(), expectedProperties);
-        expected.readingLists = [pickProperties(readingLists.toJSON(), ["read", "id"])];
+        const expected = createReadingList(blog.toJSON(), readingLists.toJSON());
 
         assert.strictEqual(readinglist.length, 1);
         assert.deepStrictEqual(readinglist[0], expected);
@@ -387,5 +403,45 @@ describe("GET users/:id", () => {
         const settledError = getSettledError(settled, invalidIds);
         if (settledError.rejections) throw new Error(settledError.rejectReason);
     });
+
+    test("Can include blogs based on read status", async () => {
+        const { user, blog } = await createUserAndBlog(existingExampleUser, exampleBlog);
+        const blog2 = await Blog.create(exampleBlog);
+
+        const blogReading = await ReadingList.create({ userId: user.id, blogId: blog.id });
+        const blog2Reading = await ReadingList.create({ userId: user.id, blogId: blog2.id, read: true});
+
+        let response = await getUser(user.id).expect(200);
+        let readinglist = response.body.readingLists;
+        assert.strictEqual(readinglist.length, 2);
+
+        response = await getUser(user.id).query({ read: false }).expect(200);
+        readinglist = response.body.readingLists;
+        assert.strictEqual(readinglist.length, 1);
+        assert.deepStrictEqual(readinglist[0], createReadingList(blog.toJSON(), blogReading.toJSON()));
+        
+        response = await getUser(user.id).query({ read: true }).expect(200);
+        readinglist = response.body.readingLists;
+        assert.strictEqual(readinglist.length, 1);
+        assert.deepStrictEqual(readinglist[0], createReadingList(blog2.toJSON(), blog2Reading.toJSON()));
+    });
+
+    test("Returns 400 for invalid read status query", async () => {
+        const { user, blog } = await createUserAndBlog(existingExampleUser, exampleBlog);
+        await ReadingList.create({ userId: user.id, blogId: blog.id });
+
+        const invalidStatus = [
+            "yes",
+            "no",
+            1,
+            0,
+            "[]",
+            "null",
+        ]
+
+        await ensureAllSettled(invalidStatus, stat => {
+            return getUser(user.id).query({ read: stat }).expect(400);
+        });
+    })
 
 })
