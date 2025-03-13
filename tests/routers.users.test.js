@@ -37,7 +37,7 @@ const baseUrl = "/api/users";
 async function createUserAndBlog(user, blog)
 {
     const createdUser = await User.create(user);
-    const createdBlog = await Blog.create({ ...blog, UserId: createdUser.id });
+    const createdBlog = await Blog.create({ ...blog, userId: createdUser.id });
     return { user: createdUser, blog: createdBlog }
 }
 
@@ -325,7 +325,6 @@ describe("GET users/:id", () => {
             }
         );
 
-        console.log("user", user.toJSON())
         const response = await getUser(user.id).expect(200);
         
         assert.deepStrictEqual(response.body, {
@@ -346,7 +345,7 @@ describe("GET users/:id", () => {
     test("readinglist contains marked blog", async () => {
         const { user, blog } = await createUserAndBlog(existingExampleUser, exampleBlog);
 
-        await ReadingList.create({ UserId: user.id, BlogId: blog.id });
+        await ReadingList.create({ userId: user.id, blogId: blog.id });
 
         const response = await getUser(user.id).expect(200);
         const readinglist = response.body.readingLists;

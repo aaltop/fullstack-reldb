@@ -29,7 +29,7 @@ const attributes = [
 ];
 
 const User = sequelize.define(
-    "User",
+    "user",
     Object.assign({}, ...attributes),
     {
         underscored: true

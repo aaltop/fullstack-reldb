@@ -15,7 +15,7 @@ router.route("/")
         const foundUser = await User.findByPk(userId);
         if (!foundUser) return res.status(400).json({ error: "invalid user id"});
 
-        await ReadingList.create({ UserId: userId, BlogId: blogId });
+        await ReadingList.create({ userId, blogId });
         return res.status(200).end();
     }));
 

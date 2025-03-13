@@ -21,12 +21,7 @@ router.route("/")
             attributes: { exclude: "passwordHash" },
         });
 
-        res.json(users.map(user => {
-            const retUser = user.toJSON();
-            retUser.blogs = retUser.Blogs;
-            delete retUser.Blogs;
-            return retUser;
-        }));
+        res.json(users.map(user => user.toJSON()));
     }))
     .post(errorCatchWrapper(async (req, res) => {
         const { name, username, password } = req.body;
@@ -77,7 +72,7 @@ router.route("/:id")
                 ],
                 include: {
                     model: ReadingList,
-                    attributes: ["BlogId"],
+                    attributes: ["blogId"],
                     include: {
                         model: Blog,
                         attributes: [
@@ -96,7 +91,7 @@ router.route("/:id")
 
         const jsonUser = user.toJSON();
         jsonUser.readingLists = jsonUser.readingLists.map(val => {
-            return val.Blog;
+            return val.blog;
         });
         res.status(200).json(jsonUser);
     }))

@@ -22,9 +22,8 @@ async function findUser(req)
 function modelToJSON(blogModel)
 {
     const retModel = blogModel.toJSON();
-    const { name, username } = retModel.User;
+    const { name, username } = retModel.user;
     retModel.user = { name, username };
-    delete retModel.User;
     return retModel;
 }
 
@@ -43,7 +42,7 @@ router.route("/")
         }
 
         const blogs = await Blog.findAll({
-            include: "User",
+            include: User,
             where,
             order: [["likes", "DESC"]]
         });
@@ -55,9 +54,9 @@ router.route("/")
         if (userOrStatus.status) return userOrStatus.status;
         
         const user = userOrStatus.user;
-        const newBlog = await Blog.create({ ...req.body, UserId: user.id });
+        const newBlog = await Blog.create({ ...req.body, userId: user.id });
         // seems to be the most sensible, least faff way of including User
-        res.status(200).json(modelToJSON(await Blog.findByPk(newBlog.id, { include: "User" })));
+        res.status(200).json(modelToJSON(await Blog.findByPk(newBlog.id, { include: User })));
     }));
 
 router.route("/:id")
@@ -71,7 +70,7 @@ router.route("/:id")
         
         if (!foundBlog) {
             return res.status(404).json({ error: "Nonexistent blog id" });
-        } else if (foundBlog.UserId !== user.id) {
+        } else if (foundBlog.userId !== user.id) {
             return res.status(401).json({ error: "User does not match blog" });
         } else {
             foundBlog.destroy();

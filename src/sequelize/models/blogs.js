@@ -58,7 +58,7 @@ const attributes = [
 ];
 
 const Blog = sequelize.define(
-    "Blog",
+    "blog",
     Object.assign({}, ...attributes),
     {
         underscored: true

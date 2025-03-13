@@ -11,12 +11,12 @@ const attributes = [
             primaryKey: true,
             autoIncrement: true
         },
-        UserId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: { model: User, key: "id" }
         },
-        BlogId: {
+        blogId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: { model: Blog, key: "id" }

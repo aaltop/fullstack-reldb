@@ -46,7 +46,7 @@ before(async () => {
         title: "This is a title",
         url: "example.com",
         year: (new Date()).getFullYear(),
-        UserId: createdUser.id
+        userId: createdUser.id
     };
 });
 

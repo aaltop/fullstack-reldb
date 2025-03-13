@@ -75,7 +75,7 @@ before(async () => {
     assert(typeof token === "string");
     exampleBlog = {
         ...newExampleBlog,
-        UserId: createdUser.id
+        userId: createdUser.id
     };
 });
 
@@ -251,7 +251,6 @@ describe("POST blog", () => {
                 invalidBlog.author,
                 invalidBlog.title,
                 invalidBlog.url,
-                invalidBlog.UserId,
             ].concat(invalidYears)
         );
 
