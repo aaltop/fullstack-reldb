@@ -58,6 +58,16 @@ describe("POST readinglists", () => {
         assert.strictEqual(endNum-startNum, 1);
     });
 
+    test("Cannot add the same user and blog twice", async () => {
+        await api.post(baseUrl)
+            .send(exampleReading)
+            .expect(200);
+        
+            await api.post(baseUrl)
+            .send(exampleReading)
+            .expect(400);
+    });
+
     test("Returns 400 for nonexistent user or blog", async () => {
 
         const invalidReadings = [
