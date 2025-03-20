@@ -85,7 +85,7 @@ describe("GET users", () => {
 
         // shouldn't actually have the user id for blogs, as all blogs are
         // from the same user
-        expected = { ...exampleUser, blogs: [{ ...exampleBlog, likes: 0 }] }
+        expected = { ...exampleUser, blogs: [{ ...exampleBlog, likes: 0 }], disabled: false }
         assert.deepStrictEqual(actual, expected);
     });
 
@@ -247,6 +247,7 @@ describe("Change username", () => {
             "name",
             "id",
             "createdAt",
+            "disabled"
         ].toSorted();
 
         const actualProperties = Object.keys(response.body).toSorted();

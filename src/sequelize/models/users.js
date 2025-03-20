@@ -26,6 +26,13 @@ const attributes = [
             allowNull: false
         }
     },
+    {
+        disabled: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false
+        }
+    }
 ];
 
 const User = sequelize.define(
