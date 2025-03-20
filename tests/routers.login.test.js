@@ -4,7 +4,7 @@ const { before, beforeEach, describe, test, after } = require("node:test");
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const { User } = require("../src/sequelize/models.js");
+const { User, Session } = require("../src/sequelize/models.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
 
 
@@ -89,6 +89,19 @@ describe("POST login", () => {
         await createPost({ ...exampleLoginDetails, password: undefined})
             .expect(400);
 
+    });
+
+    test("Sets session", async () => {
+
+        await createPost();
+
+        const session = await Session.findOne({
+            where: {
+                username: newExampleuser.username
+            }
+        });
+
+        assert.strictEqual(session.username, newExampleuser.username);
     });
 
 });

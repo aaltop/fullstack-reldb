@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const { signPayload } = require("../../utils/jwt.js");
 
-const { User } = require("../../sequelize/models.js");
+const { User, Session } = require("../../sequelize/models.js");
 const { errorCatchWrapper } = require("../utils");
 const env = require("../../utils/env");
 
@@ -29,6 +29,9 @@ router.route("/")
         }
 
         const token = signPayload({ username });
+        await Session.create({
+            username: username
+        });
         res.json({ token });
     }));
 
