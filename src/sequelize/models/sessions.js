@@ -25,24 +25,28 @@ const attributes = [
 class Session extends Model {
 
     /**
-     * Check whether the user has a valid session.
+     * Check whether the user has a valid session. Will delete invalid
+     * sessions unless `deleteInvalid` is false.
      * @param {string} username 
-     * @param {string} uuid 
+     * @param {string} uuid
+     * @param {boolean} [deleteInvalid=true] Whether to delete an invalid
+     * session. Mostly meant for testing purposes.
      * @returns 
      */
-    static async isValidSession(username, uuid)
+    static async isValidSession(username, uuid, deleteInvalid = true)
     {
         const session = await Session.findOne({ where: { username, uuid }});
         if (!session) return false;
         if (session.validUntil === null) return true;
         const now = new Date();
-        // if time is negative, not valid anymore, otherwise valid
-        return ((session.validUntil.getTime() - now.getTime()) > 0);
+        const valid = (session.validUntil.getTime() - now.getTime()) > 0;
+        if (!valid && deleteInvalid) await session.destroy();
+        return valid;
     }
 
     /**
-     * Invalidate the session of the user. If a matching session
-     * is not found, return false.
+     * Invalidate the session of the user. Returns the number of
+     * matching sessions that were changed.
      * @param {string} username
      * @param {string | undefined } uuid If undefined, set all
      * sessions of the user as invalid, otherwise set the one
@@ -53,23 +57,26 @@ class Session extends Model {
     {
     
         const dayBack = Date.now() - 24*60*60*1000;
+        let numAffect;
         if (!uuid) {
-            await Session.update(
+            let rest;
+            [numAffect, ...rest] = await Session.update(
                 { validUntil: dayBack },
                 { where: { username }}
             );
         } else {
             const session = await Session.findOne({ where: { username, uuid } });
-            if (!session) return false;
+            if (!session) return 0;
             session.validUntil = dayBack;
             await session.save();
+            numAffect = 1;
         }
-        return true;
+        return numAffect;
     }
 
     /**
-     * Set the session of the user as valid. If a matching session
-     * is not found, return false.
+     * Set the session of the user as valid. Returns the number of
+     * matching sessions that were changed.
      * @param {string} username
      * @param {string} uuid If undefined, set all
      * sessions of the user as valid, otherwise set the one
@@ -78,18 +85,40 @@ class Session extends Model {
      */
     static async setAsValid(username, uuid)
     {
+        let numAffect;
         if (!uuid) {
-            await Session.update(
+            let rest;
+            [numAffect, ...rest] = await Session.update(
                 { validUntil: null },
                 { where: { username }}
             );
         } else {
             const session = await Session.findOne({ where: { username, uuid } });
-            if (!session) return false;
+            if (!session) return 0;
             session.validUntil = null;
             await session.save();
+            numAffect = 1;
         }
-        return true;
+        return numAffect;
+    }
+
+    /**
+     * Delete the session of the user. Returns the number of
+     * matching sessions that were deleted.
+     * @param {string} username
+     * @param {string} uuid If undefined, delete all session of the
+     * user, otherwise set the one matching the uuid.
+     * @returns
+     */
+    static async deleteSession(username, uuid)
+    {
+        let numDest;
+        if (uuid) {
+            numDest = await Session.destroy({ where: { username, uuid }});
+        } else {
+            numDest = await Session.destroy({ where: { username } });
+        }
+        return numDest;
     }
 }
 

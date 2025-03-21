@@ -10,6 +10,7 @@ const { Blog, User, ReadingList, Session } = require("../src/sequelize/models.js
 const { ensureAllSettled } = require("../src/utils/testing.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
 const { createBearerString } = require("../src/utils/http.js");
+const localJwt = require("../src/utils/jwt.js");
 
 const api = supertest(app);
 const baseUrl = "/api/readinglists";
@@ -31,15 +32,21 @@ const newExampleBlog = {
 };
 let exampleBlog = null;
 let exampleReading = null;
+
+async function login(username, password)
+{
+    const response = await api.post("/api/login")
+        .send({ username, password })
+        .expect(200);
+
+    return response.body.token;
+}
+
 // create tables, set dummy data
 before(async () => {
     await forceSync();
     const createdUser = await User.create(existingExampleUser);
-    const response = await api.post("/api/login")
-        .send({ username: existingExampleUser.username, password: examplePassword })
-        .expect(200);
-
-    token = response.body.token;
+    token = await login(existingExampleUser.username, examplePassword);
     assert(typeof token === "string");
     exampleBlog = {
         ...newExampleBlog,
@@ -212,11 +219,20 @@ describe("POST readinglists/:id", () => {
     test("Returns 401 for invalid server-side session", async () => {
         const { id } = await ReadingList.create(exampleReading);
 
-        await Session.setAsInvalid(existingExampleUser.username);
-        await postReadStatus(id, { read: true }).expect(401);
+        const token = await login(existingExampleUser.username, examplePassword);
+        const { uuid } = localJwt.verifyToken(token);
 
-        // also ensure that it IS the invalidation of the session
-        await Session.setAsValid(existingExampleUser.username);
-        await postReadStatus(id, { read: true }).expect(200);
+        assert.strictEqual(
+            await Session.count(
+            { where: { username: existingExampleUser.username }}),
+            2
+        );
+        await Session.setAsInvalid(existingExampleUser.username);
+        await postReadStatus(id, { read: true }, token).expect(401);
+        assert.strictEqual(
+            await Session.count(
+            { where: { username: existingExampleUser.username }}),
+            1
+        );
     });
 });

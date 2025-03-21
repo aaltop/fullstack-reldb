@@ -20,37 +20,47 @@ before(async () => {
     await forceSync(); 
 });
 
+async function createSession(username)
+{
+    username ??= existingExampleUser.username;
+    const { uuid } = await Session.create({ username });
+    return { username, uuid }
+}
+
 describe("Session validity", () => {
 
     beforeEach(async () => {
         await User.destroy({ where: {} });
+        await Session.destroy({ where: {} });
         await User.create(existingExampleUser);
     });
-
-    async function createSession()
-    {
-        const { username, uuid } = await Session.create({ username: existingExampleUser.username });
-        return { username, uuid }
-    }
 
     test("Can be invalidated", async () => {
         const { username, uuid } = await createSession();
         assert(await Session.isValidSession(username, uuid));
-        assert(await Session.setAsInvalid(existingExampleUser.username));
+        assert.strictEqual(await Session.setAsInvalid(existingExampleUser.username), 1);
         assert(!(await Session.isValidSession(username, uuid)));
+    });
+
+    test("Check deletes invalid session", async () => {
+        const { username, uuid } = await createSession();
+        assert.strictEqual(await Session.count(), 1);
+        assert.strictEqual(await Session.setAsInvalid(existingExampleUser.username), 1);
+        assert(!(await Session.isValidSession(username, uuid)));
+        assert.strictEqual(await Session.count(), 0);
     });
 
     test("Can be set to valid", async () => {
         const { username, uuid } = await createSession();
         assert(await Session.isValidSession(username, uuid));
-        assert(await Session.setAsInvalid(existingExampleUser.username));
-        assert(!(await Session.isValidSession(username, uuid)));
-        assert(await Session.setAsValid(existingExampleUser.username));
+        assert.strictEqual(await Session.setAsInvalid(existingExampleUser.username), 1);
+        assert(!(await Session.isValidSession(username, uuid, false)));
+        assert.strictEqual(await Session.setAsValid(existingExampleUser.username), 1);
         assert(await Session.isValidSession(username, uuid));
     });
 
     test("Is tested correctly", async () => {
-        const { username, uuid } = await createSession();
+        let { username, uuid } = await createSession();
 
         const actual = [
             [
@@ -65,7 +75,7 @@ describe("Session validity", () => {
 
         await Session.setAsInvalid(existingExampleUser.username);
         actual.push([
-            await Session.isValidSession(username, uuid) === false,
+            await Session.isValidSession(username, uuid, false) === false,
             "invalidated session"
         ]);
 
@@ -103,7 +113,7 @@ describe("Session validity", () => {
         assert(await Session.isValidSession(first.username, first.uuid));
         assert(await Session.isValidSession(second.username, second.uuid));
 
-        assert(await Session.setAsInvalid(first.username, first.uuid));
+        assert.strictEqual(await Session.setAsInvalid(first.username, first.uuid), 1);
         assert(await Session.isValidSession(second.username, second.uuid));
         assert(!(await Session.isValidSession(first.username, first.uuid)));
     });
@@ -112,14 +122,49 @@ describe("Session validity", () => {
         const first = await createSession();
         const second = await createSession();
 
-        assert(await Session.setAsInvalid(first.username));
+        assert.strictEqual(await Session.setAsInvalid(first.username), 2);
 
-        assert(!(await Session.isValidSession(first.username, first.uuid)));
-        assert(!(await Session.isValidSession(second.username, second.uuid)));
+        assert(!(await Session.isValidSession(first.username, first.uuid, false)));
+        assert(!(await Session.isValidSession(second.username, second.uuid, false)));
 
-        assert(await Session.setAsValid(second.username, second.uuid));
+        assert.strictEqual(await Session.setAsValid(second.username, second.uuid), 1);
         assert(await Session.isValidSession(second.username, second.uuid));
         assert(!(await Session.isValidSession(first.username, first.uuid)));
     })
+
+});
+
+describe("Session removal", () => {
+
+    beforeEach(async () => {
+        await User.destroy({ where: {} });
+        await Session.destroy({ where: {} });
+        await User.create(existingExampleUser);
+    });
+
+    test("Succeeds for existing session", async () => {
+       const ses = await createSession();
+       assert.strictEqual(await Session.count(), 1);
+       assert.strictEqual(await Session.deleteSession(ses.username, ses.uuid), 1);
+       assert.strictEqual(await Session.count(), 0);
+    });
+
+    test("Fails for nonexistent session", async () => {
+        const ses = await createSession();
+        assert.strictEqual(await Session.count(), 1);
+        assert.strictEqual(await Session.deleteSession("Sometest@username.com"), 0);
+        assert.strictEqual(await Session.deleteSession("Sometest@username.com", ses.uuid), 0);
+        assert.strictEqual(await Session.count(), 1);
+    });
+
+    test("Can be done per session", async () => {
+        const first = await createSession();
+        const second = await createSession();
+        assert.strictEqual(await Session.count(), 2);
+        assert.strictEqual(await Session.deleteSession(first.username, first.uuid), 1);
+        assert.strictEqual(await Session.count(), 1);
+        assert(await Session.isValidSession(second.username, second.uuid));
+    });
+
 
 });

@@ -11,6 +11,7 @@ const { createBearerString } = require("../src/utils/http.js");
 const { getSettledError } = require("../src/utils/promise.js");
 const mathUtils = require("../src/utils/math.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
+const localJwt = require("../src/utils/jwt.js");
 
 const api = supertest(app);
 const baseUrl = "/api/blogs";
@@ -53,6 +54,15 @@ function compareActualAndExpected(actual, expectedBlog, expectedUser)
     );
 }
 
+async function login(username, password)
+{
+    const response = await api.post("/api/login")
+        .send({ username, password })
+        .expect(200);
+
+    return response.body.token;
+}
+
 let token = null;
 const newExampleBlog = {
     author: "author Bloke",
@@ -66,11 +76,7 @@ before(async () => {
     await forceSync();
 
     const createdUser = await User.create(existingExampleUser);
-    response = await api.post("/api/login")
-        .send({ username: existingExampleUser.username, password: examplePassword })
-        .expect(200);
-
-    token = response.body.token;
+    token = await login(existingExampleUser.username, examplePassword);
     assert(typeof token === "string");
     exampleBlog = {
         ...newExampleBlog,
@@ -291,12 +297,21 @@ describe("POST blog", () => {
     });
 
     test("Returns 401 for invalid server-side session", async () => {
-        await Session.setAsInvalid(existingExampleUser.username);
-        await postBlog(newExampleBlog).expect(401);
 
-        // also ensure that it IS the invalidation of the session
-        await Session.setAsValid(existingExampleUser.username);
-        await postBlog(newExampleBlog).expect(200);
+        const token = await login(existingExampleUser.username, examplePassword);
+        const { uuid } = localJwt.verifyToken(token);
+        await Session.setAsInvalid(existingExampleUser.username, uuid);
+        assert.strictEqual(
+            await Session.count(
+            { where: { username: existingExampleUser.username }}),
+            2
+        );
+        await postBlog(newExampleBlog, token).expect(401);
+        assert.strictEqual(
+            await Session.count(
+            { where: { username: existingExampleUser.username }}),
+            1
+        );
     });
 });
 
@@ -375,12 +390,21 @@ describe("DELETE blog", () => {
 
         const { id } = await Blog.findOne();
 
-        await Session.setAsInvalid(existingExampleUser.username);
-        await deleteBlog(id).expect(401);
+        const token = await login(existingExampleUser.username, examplePassword);
+        assert.strictEqual(
+            await Session.count(
+            { where: { username: existingExampleUser.username }}),
+            2
+        );
+        const { uuid } = localJwt.verifyToken(token);
 
-        // also ensure that it IS the invalidation of the session
-        await Session.setAsValid(existingExampleUser.username);
-        await deleteBlog(id).expect(204);
+        await Session.setAsInvalid(existingExampleUser.username, uuid);
+        await deleteBlog(id, token).expect(401);
+        assert.strictEqual(
+            await Session.count(
+            { where: { username: existingExampleUser.username }}),
+            1
+        );
     });
 
 });
