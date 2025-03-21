@@ -59,6 +59,19 @@ function usernameFromBearerString(bearerString)
     }
 }
 
+function uuidFromBearerString(bearerString)
+{
+    const ret = payloadFromBearerString(bearerString);
+    if (ret.error) return ret;
+    const uuid = ret.payload.uuid;
+    // do a little verification of the content?
+    if (typeof uuid !== "string") {
+        return { error: new Error("Invalid authorization header token, uuid was not a string") }
+    } else {
+        return { uuid }
+    }
+}
+
 /**
  * Find a user based on the Authorization header's token. Return either
  * the user or a status.
@@ -68,16 +81,19 @@ function usernameFromBearerString(bearerString)
  */
 async function findUser(req)
 {
-    const bearerResult = usernameFromBearerString(req.header("Authorization"));
-    if (bearerResult.error) throw bearerResult.error;
+    const usernameResult = usernameFromBearerString(req.header("Authorization"));
+    if (usernameResult.error) throw usernameResult.error;
+
+    const uuidResult = uuidFromBearerString(req.header("Authorization"));
+    if (uuidResult.error) throw uuidResult.error;
     
     let status = undefined;
     const res = req.res;
-    if (!(await Session.hasValidSession(bearerResult.username))) {
+    if (!(await Session.isValidSession(usernameResult.username, uuidResult.uuid))) {
         status = res.status(401).json({ error: "No valid session found for user" });
         return { user: null, status }
     }
-    const user = await User.findOne({ where: { username: bearerResult.username }});
+    const user = await User.findOne({ where: { username: usernameResult.username }});
     if (!user) status = res.status(400).json({ error: "No user matches given token" });
     return { user, status };
 }

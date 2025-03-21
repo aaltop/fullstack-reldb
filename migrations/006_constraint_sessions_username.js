@@ -9,8 +9,8 @@ module.exports = {
                     type: "UNIQUE",
                     fields: ["username"],
                     name: "unique_username",
+                    transaction: t
                 },
-                { transaction: t }
             );
         });
     },

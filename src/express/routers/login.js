@@ -29,20 +29,8 @@ router.route("/")
             return res.status(400).json({ error: "password incorrect" });
         }
 
-        const token = signPayload({ username });
-        try {
-            await Session.create({
-                username: username
-            });
-        } catch (error) {
-            if ( // if session with username already exists, ignore
-                error instanceof ValidationError
-                && error.errors.length === 1
-                && error.errors[0].message.includes("username must be unique")
-            ) { } else {
-                throw error;
-            }
-        }
+        const session = await Session.create({ username });
+        const token = signPayload({ username, uuid: session.uuid });
         res.json({ token });
     }));
 

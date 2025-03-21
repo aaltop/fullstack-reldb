@@ -19,7 +19,7 @@ ReadingList.belongsTo(User);
 Blog.hasMany(ReadingList);
 ReadingList.belongsTo(Blog);
 
-User.hasOne(
+User.hasMany(
     Session,
     {
         sourceKey: "username",

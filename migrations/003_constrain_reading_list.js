@@ -9,9 +9,9 @@ module.exports = {
                 {
                     type: "UNIQUE",
                     fields: ["user_id", "blog_id"],
-                    name: "unique_user_blog"
+                    name: "unique_user_blog",
+                    transaction: t
                 },
-                { transaction: t }
             );
         });
     },

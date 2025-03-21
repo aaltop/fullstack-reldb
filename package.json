@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "cross-env NODE_ENV=test node --test",
+    "test:migration:down:one": "cross-env NODE_ENV=test node ./scripts/migrations/downOne.js",
     "dev": "cross-env NODE_ENV=development nodemon ./index.js",
     "dev:migration:down:one": "cross-env NODE_ENV=development node ./scripts/migrations/downOne.js"
   },
