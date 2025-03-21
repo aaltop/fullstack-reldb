@@ -6,7 +6,7 @@ const { describe, test, after, beforeEach, before, afterEach } = require("node:t
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const { Blog, User, ReadingList } = require("../src/sequelize/models.js");
+const { Blog, User, ReadingList, Session } = require("../src/sequelize/models.js");
 const { ensureAllSettled } = require("../src/utils/testing.js");
 const { forceSync } = require("../src/sequelize/migrations.js");
 const { createBearerString } = require("../src/utils/http.js");
@@ -207,5 +207,16 @@ describe("POST readinglists/:id", () => {
             }
             return postReadStatus(id, { read: true }, val).expect(401);
         })
-    })
+    });
+
+    test("Returns 401 for invalid server-side session", async () => {
+        const { id } = await ReadingList.create(exampleReading);
+
+        await Session.setAsInvalid(existingExampleUser.username);
+        await postReadStatus(id, { read: true }).expect(401);
+
+        // also ensure that it IS the invalidation of the session
+        await Session.setAsValid(existingExampleUser.username);
+        await postReadStatus(id, { read: true }).expect(200);
+    });
 });

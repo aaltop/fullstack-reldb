@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const { signPayload } = require("../../utils/jwt.js");
+const { ValidationError } = require("sequelize");
 
 const { User, Session } = require("../../sequelize/models.js");
 const { errorCatchWrapper } = require("../utils");
@@ -29,9 +30,19 @@ router.route("/")
         }
 
         const token = signPayload({ username });
-        await Session.create({
-            username: username
-        });
+        try {
+            await Session.create({
+                username: username
+            });
+        } catch (error) {
+            if ( // if session with username already exists, ignore
+                error instanceof ValidationError
+                && error.errors.length === 1
+                && error.errors[0].message.includes("username must be unique")
+            ) { } else {
+                throw error;
+            }
+        }
         res.json({ token });
     }));
 

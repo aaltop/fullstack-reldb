@@ -6,8 +6,7 @@ const { describe, test, after, beforeEach, before, afterEach } = require("node:t
 const assert = require("node:assert");
 
 const app = require("../src/app");
-const { Blog, User } = require("../src/sequelize/models.js");
-const sequelize = require("../src/sequelize/connection");
+const { Blog, User, Session } = require("../src/sequelize/models.js");
 const { createBearerString } = require("../src/utils/http.js");
 const { getSettledError } = require("../src/utils/promise.js");
 const mathUtils = require("../src/utils/math.js");
@@ -290,6 +289,15 @@ describe("POST blog", () => {
         if (settledError.rejections) throw new Error(settledError.rejectReason);
 
     });
+
+    test("Returns 401 for invalid server-side session", async () => {
+        await Session.setAsInvalid(existingExampleUser.username);
+        await postBlog(newExampleBlog).expect(401);
+
+        // also ensure that it IS the invalidation of the session
+        await Session.setAsValid(existingExampleUser.username);
+        await postBlog(newExampleBlog).expect(200);
+    });
 });
 
 describe("DELETE blog", () => {
@@ -361,6 +369,18 @@ describe("DELETE blog", () => {
         const settledError = getSettledError(result, ["no auth"].concat(invalidValues));
         if (settledError.rejections) throw new Error(settledError.rejectReason);
 
+    });
+
+    test("Returns 401 for invalid server-side session", async () => {
+
+        const { id } = await Blog.findOne();
+
+        await Session.setAsInvalid(existingExampleUser.username);
+        await deleteBlog(id).expect(401);
+
+        // also ensure that it IS the invalidation of the session
+        await Session.setAsValid(existingExampleUser.username);
+        await deleteBlog(id).expect(204);
     });
 
 });

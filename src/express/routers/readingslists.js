@@ -28,7 +28,6 @@ router.route("/:id")
         }
 
         const userOrStatus = await findUser(req);
-        console.log("Found user with header", req.header("Authorization"));
         if (userOrStatus.status) return userOrStatus.status;
 
         const list = await ReadingList.findByPk(id);

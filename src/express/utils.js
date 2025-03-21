@@ -1,8 +1,8 @@
-const { Request, RequestHandler} = require("express");
+const { Request, RequestHandler } = require("express");
 
 const { parseBearerString } = require("../utils/http.js");
 const { verifyToken } = require("../utils/jwt.js");
-const { User } = require("../sequelize/models.js");
+const { User, Session } = require("../sequelize/models.js");
 
 /**
  * Wraps an express RequestHandler with a try...catch that will
@@ -61,17 +61,23 @@ function usernameFromBearerString(bearerString)
 
 /**
  * Find a user based on the Authorization header's token. Return either
- * the user or a status saying no user was found matching the given token.
- * @param {*} req 
+ * the user or a status.
+ * @param {Request} req
  * @returns 
+ * status: 400 if no matching user, 401 if user has no valid session.
  */
 async function findUser(req)
 {
     const bearerResult = usernameFromBearerString(req.header("Authorization"));
     if (bearerResult.error) throw bearerResult.error;
     
-    const user = await User.findOne({ where: { username: bearerResult.username }});
     let status = undefined;
+    const res = req.res;
+    if (!(await Session.hasValidSession(bearerResult.username))) {
+        status = res.status(401).json({ error: "No valid session found for user" });
+        return { user: null, status }
+    }
+    const user = await User.findOne({ where: { username: bearerResult.username }});
     if (!user) status = res.status(400).json({ error: "No user matches given token" });
     return { user, status };
 }

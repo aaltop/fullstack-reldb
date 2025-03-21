@@ -14,7 +14,6 @@ const newExampleuser = {
     name: "Dave Example",
     username: "DaveyBoy@DavesSite.com",
     password: "Ap3rfectlyv@lidpassword"
-
 };
 
 before(async () => {
@@ -102,6 +101,11 @@ describe("POST login", () => {
         });
 
         assert.strictEqual(session.username, newExampleuser.username);
+    });
+
+    test("Can login twice in a row", async () => {
+        await createPost().expect(200);
+        await createPost().expect(200);
     });
 
 });
