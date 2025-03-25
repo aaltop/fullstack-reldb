@@ -16,6 +16,12 @@ const existingExampleUser = {
     passwordHash: exampleHash
 };
 
+const otherexistingExampleUser = {
+    name: "John Doe",
+    username: "username@service.com",
+    passwordHash: exampleHash
+};
+
 before(async () => {
     await forceSync(); 
 });
@@ -130,7 +136,31 @@ describe("Session validity", () => {
         assert.strictEqual(await Session.setAsValid(second.username, second.uuid), 1);
         assert(await Session.isValidSession(second.username, second.uuid));
         assert(!(await Session.isValidSession(first.username, first.uuid)));
-    })
+    });
+
+    test("Methods throw error for non-string username", async () => {
+        const invalidValues = [
+            undefined,
+            null,
+            1,
+            [],
+            { username: "name@service.com" },
+        ];
+
+        const { uuid } = await createSession();
+        
+        await ensureAllSettled(invalidValues, val => {
+            return assert.rejects(Session.isValidSession(val, uuid));
+        });
+
+        await ensureAllSettled(invalidValues, val => {
+            return assert.rejects(Session.setAsInvalid(val, uuid));
+        });
+
+        await ensureAllSettled(invalidValues, val => {
+            return assert.rejects(Session.setAsValid(val, uuid));
+        });
+    });
 
 });
 
@@ -140,6 +170,7 @@ describe("Session removal", () => {
         await User.destroy({ where: {} });
         await Session.destroy({ where: {} });
         await User.create(existingExampleUser);
+        await User.create(otherexistingExampleUser);
     });
 
     test("Succeeds for existing session", async () => {
@@ -166,5 +197,39 @@ describe("Session removal", () => {
         assert(await Session.isValidSession(second.username, second.uuid));
     });
 
+    test("Can be done per user", async () => {
+        let first;
+        first = await createSession();
+        const second = await createSession(otherexistingExampleUser.username);
+        assert.strictEqual(await Session.count(), 2);
+        assert.strictEqual(await Session.deleteSession(first.username, first.uuid), 1);
+        assert.strictEqual(await Session.count(), 1);
+        assert(await Session.isValidSession(second.username, second.uuid));
+
+        first = await createSession();
+        await createSession();
+        assert.strictEqual(await Session.count(), 3);
+        assert.strictEqual(await Session.deleteSession(first.username), 2);
+        assert.strictEqual(await Session.count(), 1);
+        assert(await Session.isValidSession(second.username, second.uuid));
+    });
+
+    test("Throws error for non-string username", async () => {
+       
+        const invalidValues = [
+            undefined,
+            null,
+            1,
+            [],
+            { username: "name@service.com" },
+        ];
+
+        await ensureAllSettled(invalidValues, val => {
+            return assert.rejects(Session.deleteSession(val, "db5c3bdf-3425-45b6-a7a6-bb13e19775be"));
+        });
+        await ensureAllSettled(invalidValues, val => {
+            return assert.rejects(Session.deleteSession(val));
+        });
+    });
 
 });

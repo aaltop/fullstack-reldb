@@ -35,6 +35,11 @@ class Session extends Model {
      */
     static async isValidSession(username, uuid, deleteInvalid = true)
     {
+
+        if (!(typeof username === "string")) {
+            throw new TypeError("Username must be a string");
+        }
+
         const session = await Session.findOne({ where: { username, uuid }});
         if (!session) return false;
         if (session.validUntil === null) return true;
@@ -55,6 +60,10 @@ class Session extends Model {
      */
     static async setAsInvalid(username, uuid)
     {
+
+        if (!(typeof username === "string")) {
+            throw new TypeError("Username must be a string");
+        }
     
         const dayBack = Date.now() - 24*60*60*1000;
         let numAffect;
@@ -85,6 +94,11 @@ class Session extends Model {
      */
     static async setAsValid(username, uuid)
     {
+
+        if (!(typeof username === "string")) {
+            throw new TypeError("Username must be a string");
+        }
+
         let numAffect;
         if (!uuid) {
             let rest;
@@ -107,11 +121,16 @@ class Session extends Model {
      * matching sessions that were deleted.
      * @param {string} username
      * @param {string} uuid If undefined, delete all session of the
-     * user, otherwise set the one matching the uuid.
+     * user, otherwise delete the one matching the uuid.
      * @returns
      */
     static async deleteSession(username, uuid)
     {
+
+        if (!(typeof username === "string")) {
+            throw new TypeError("Username must be a string");
+        }
+
         let numDest;
         if (uuid) {
             numDest = await Session.destroy({ where: { username, uuid }});

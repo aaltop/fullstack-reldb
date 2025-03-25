@@ -74,7 +74,7 @@ function uuidFromBearerString(bearerString)
 
 /**
  * Find a user based on the Authorization header's token. Return either
- * the user or a status.
+ * the user and session uuid or a status.
  * @param {Request} req
  * @returns 
  * status: 400 if no matching user, 401 if user has no valid session.
@@ -91,11 +91,15 @@ async function findUser(req)
     const res = req.res;
     if (!(await Session.isValidSession(usernameResult.username, uuidResult.uuid))) {
         status = res.status(401).json({ error: "No valid session found for user" });
-        return { user: null, status }
+        return { status }
     }
     const user = await User.findOne({ where: { username: usernameResult.username }});
     if (!user) status = res.status(400).json({ error: "No user matches given token" });
-    return { user, status };
+    return {
+        user: user ? user : undefined,
+        uuid: user ? uuidResult.uuid : undefined,
+        status
+    };
 }
 
 module.exports = {
